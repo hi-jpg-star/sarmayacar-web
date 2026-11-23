@@ -1,9 +1,16 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "sarmayacar-site",
+	"name": "sarmayacar-web",
 	"main": "./src/worker.ts",
 	"compatibility_date": "2026-02-24",
 	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true,
+			"persist": true,
+		},
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",

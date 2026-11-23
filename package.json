@@ -13,7 +13,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "deploy": "astro build && wrangler deploy",
-    "typecheck": "astro check"
+    "typecheck": "astro check",
+    "deploy:cf": "node scripts/cf-deploy.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.1",
