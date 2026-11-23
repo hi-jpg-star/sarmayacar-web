@@ -4,8 +4,8 @@
  * home page. Its two interlocking parts float, follow the pointer slightly,
  * and separate and leave the frame as the visitor scrolls.
  *
- * The scene paints the Dark Green background itself; sections that should
- * show it are transparent (see .has-glass rules in ScHero / ScManifesto).
+ * The scene paints a solid Dark Green background; sections that should
+ * show it are transparent (see the body:has(.glass) rules).
  * Without WebGL or with reduced motion, a still insignia image is shown.
  */
 import insigniaRaw from "../../assets/brand/insignia.svg?raw";
@@ -21,15 +21,12 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 <script>
 	import {
 		ACESFilmicToneMapping,
-		CanvasTexture,
 		Color,
 		ExtrudeGeometry,
 		Group,
 		Mesh,
-		MeshBasicMaterial,
 		MeshPhysicalMaterial,
 		PerspectiveCamera,
-		PlaneGeometry,
 		PMREMGenerator,
 		Scene,
 		SRGBColorSpace,
@@ -65,7 +62,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.75));
 		renderer.outputColorSpace = SRGBColorSpace;
 		renderer.toneMapping = ACESFilmicToneMapping;
-		renderer.toneMappingExposure = 1.35;
+		renderer.toneMappingExposure = 1.1;
 		renderer.setClearColor(darkGreen, 1);
 
 		const scene = new Scene();
@@ -75,53 +72,22 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		const camera = new PerspectiveCamera(30, 1, 1, 5000);
 		camera.position.set(0, 0, 1100);
 
-		// One solid backdrop with soft light painted in. Glass (transmission) only
-		// refracts opaque objects, so the light has to live on an opaque surface.
-		const backdropCanvas = document.createElement("canvas");
-		backdropCanvas.width = 1600;
-		backdropCanvas.height = 1000;
-		const bg = backdropCanvas.getContext("2d")!;
-		const hex = (c: Color) => `#${c.getHexString()}`;
-		const paintBackdrop = (t: number) => {
-			bg.fillStyle = hex(darkGreen);
-			bg.fillRect(0, 0, 1600, 1000);
-			const blob = (x: number, y: number, r: number, color: Color, a: number) => {
-				const g = bg.createRadialGradient(x, y, 0, x, y, r);
-				// brand colour (from the CSS variables) + an alpha byte, as 8-digit hex
-				const alpha = (v: number) => Math.round(v * 255).toString(16).padStart(2, "0");
-				g.addColorStop(0, hex(color) + alpha(a));
-				g.addColorStop(1, hex(color) + alpha(0));
-				bg.fillStyle = g;
-				bg.fillRect(0, 0, 1600, 1000);
-			};
-			blob(980 + Math.sin(t * 0.3) * 60, 430 + Math.cos(t * 0.25) * 40, 520, lightGreen, 0.95);
-			blob(1180 + Math.cos(t * 0.2) * 80, 300, 260, white, 0.55);
-			blob(640, 760 + Math.sin(t * 0.22) * 50, 420, lightGreen, 0.5);
-			blob(1350, 820, 300, white, 0.18);
-		};
-		paintBackdrop(0);
-		const backdropTexture = new CanvasTexture(backdropCanvas);
-		backdropTexture.colorSpace = SRGBColorSpace;
-		const backdrop = new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ map: backdropTexture, toneMapped: false }));
-		backdrop.position.z = -700;
-		scene.add(backdrop);
-
 		// Extrude the two insignia shapes from the real logo file.
 		const tpl = root.querySelector<HTMLTemplateElement>("template[data-svg]")!;
 		const svg = new SVGLoader().parse(tpl.innerHTML);
 		const material = new MeshPhysicalMaterial({
-			color: lightGreen.clone().lerp(white, 0.82),
+			// clear "liquid" glass: fully transmissive, polished, slight dispersion at the edges
+			color: white,
 			metalness: 0,
-			roughness: 0.22, // frosted
+			roughness: 0.02,
 			transmission: 1,
-			thickness: 24,
+			thickness: 36,
 			ior: 1.5,
-			attenuationColor: lightGreen.clone().lerp(white, 0.5),
-			attenuationDistance: 1400,
+			dispersion: 4,
 			clearcoat: 1,
-			clearcoatRoughness: 0.12,
+			clearcoatRoughness: 0.02,
 			specularIntensity: 1,
-			envMapIntensity: 1.8,
+			envMapIntensity: 2.2,
 		});
 
 		const insignia = new Group();
@@ -130,12 +96,12 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 			const part = new Group();
 			for (const shape of SVGLoader.createShapes(path)) {
 				const geo = new ExtrudeGeometry(shape, {
-					depth: 46,
+					depth: 40,
 					bevelEnabled: true,
-					bevelThickness: 6,
-					bevelSize: 4,
-					bevelSegments: 6,
-					curveSegments: 4,
+					bevelThickness: 12,
+					bevelSize: 7,
+					bevelSegments: 14,
+					curveSegments: 6,
 				});
 				part.add(new Mesh(geo, material));
 			}
@@ -167,15 +133,11 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 			renderer.setSize(w, h, false);
 			camera.aspect = w / h;
 			camera.updateProjectionMatrix();
-			// size the backdrop to fill the view at its depth
-			const dist = camera.position.z - backdrop.position.z;
-			const vh = 2 * Math.tan((camera.fov * Math.PI) / 360) * dist;
-			backdrop.scale.set(vh * camera.aspect * 1.05, vh * 1.05, 1);
 			const s = Math.min(w / 1440, h / 900);
-			const scale = (mobile ? 0.8 : 0.95) * Math.max(0.55, s);
+			const scale = (mobile ? 0.85 : 1.05) * Math.max(0.55, s);
 			holder.scale.setScalar(scale);
-			baseX = mobile ? 40 : w > 1100 ? 150 : 90;
-			baseY = mobile ? 70 : 30;
+			baseX = mobile ? 30 : w > 1100 ? 230 : 120;
+			baseY = mobile ? 150 : 90;
 		};
 		resize();
 		addEventListener("resize", resize);
@@ -201,7 +163,6 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 
 		const t0 = performance.now();
 		let smooth = 0;
-		let lastPaint = -1;
 		const frame = () => {
 			requestAnimationFrame(frame);
 			const y = scrollY;
@@ -237,12 +198,6 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 				part.rotation.set(dir * e * 1.2, dir * (open * 0.35 + e * 1.4), dir * e * 0.8);
 			});
 
-			// slow drift of the light; repaint ~15 times a second
-			if (Math.floor(t * 15) !== lastPaint) {
-				lastPaint = Math.floor(t * 15);
-				paintBackdrop(t);
-				backdropTexture.needsUpdate = true;
-			}
 
 			renderer.render(scene, camera);
 		};

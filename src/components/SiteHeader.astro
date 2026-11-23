@@ -192,16 +192,6 @@ const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 		width: 160px;
 	}
 
-	/* Home: the giant logo in the hero stands in for the header logo until it scrolls away */
-	.sh__logo {
-		transition: opacity 0.5s var(--sc-ease);
-	}
-
-	.sh.sh--hero-logo:not(.is-open) .sh__logo {
-		opacity: 0;
-		pointer-events: none;
-	}
-
 	.sh__logo-img {
 		width: 100%;
 		height: auto;

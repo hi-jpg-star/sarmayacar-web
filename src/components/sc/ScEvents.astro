@@ -111,7 +111,7 @@ const link = href(value.link_url);
 					b.setAttribute("aria-label", `Photo ${j + 1}`);
 					const t = im.cloneNode() as HTMLImageElement;
 					t.sizes = "120px";
-					b.append(t);
+					b.appendChild(t);
 					b.addEventListener("click", () => show(j));
 					return b;
 				}),
@@ -311,6 +311,12 @@ const link = href(value.link_url);
 
 	.gv.is-open {
 		opacity: 1;
+	}
+
+	/* display:grid above would otherwise override the hidden attribute
+	   and leave an invisible layer over the whole page */
+	.gv[hidden] {
+		display: none;
 	}
 
 	.gv__top {
