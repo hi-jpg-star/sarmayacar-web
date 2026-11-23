@@ -220,13 +220,15 @@ const uid = `sectors-${value._key}`;
 		display: grid;
 		place-items: center;
 		aspect-ratio: 3 / 2;
-		padding: 18%;
+		padding: 4%;
 		transition: background 0.4s var(--sc-ease);
 	}
 
 	.sx__logo :global(img) {
-		max-height: 64px;
+		/* portfolio logos are square files with built-in padding */
 		width: auto;
+		height: 100%;
+		max-height: 150px;
 		object-fit: contain;
 		filter: grayscale(1);
 		transition: filter 0.4s, transform 0.6s var(--sc-ease);

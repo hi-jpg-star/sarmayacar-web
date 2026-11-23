@@ -134,19 +134,9 @@ const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 			header.dataset.tone = tone;
 			header.classList.toggle("is-scrolled", window.scrollY > 40);
 		};
-		let ticking = false;
-		window.addEventListener(
-			"scroll",
-			() => {
-				if (ticking) return;
-				ticking = true;
-				requestAnimationFrame(() => {
-					update();
-					ticking = false;
-				});
-			},
-			{ passive: true },
-		);
+		// Cheap enough to run on every scroll event; no animation-frame gating,
+		// so the header can never get stuck if a frame is skipped.
+		window.addEventListener("scroll", update, { passive: true });
 		window.addEventListener("resize", update);
 		update();
 	}
@@ -364,6 +354,12 @@ const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 		gap: 10px;
 		font-size: 15px;
 		color: var(--sc-mid-grey);
+	}
+
+	.sm__contact a,
+	.sm__nav a {
+		color: inherit;
+		text-decoration: none;
 	}
 
 	.sm__contact a:hover {
