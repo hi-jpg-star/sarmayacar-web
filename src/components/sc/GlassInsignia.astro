@@ -75,33 +75,36 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		const camera = new PerspectiveCamera(30, 1, 1, 5000);
 		camera.position.set(0, 0, 1100);
 
-		// Soft light shapes behind the glass, so the frosting has something to blur.
-		const glowTexture = (() => {
-			const c = document.createElement("canvas");
-			c.width = c.height = 256;
-			const g = c.getContext("2d")!;
-			const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-			grad.addColorStop(0, "rgba(255,255,255,1)");
-			grad.addColorStop(1, "rgba(255,255,255,0)");
-			g.fillStyle = grad;
-			g.fillRect(0, 0, 256, 256);
-			return new CanvasTexture(c);
-		})();
-		const glows: Mesh[] = [];
-		const addGlow = (color: Color, size: number, x: number, y: number, opacity: number) => {
-			const m = new Mesh(
-				new PlaneGeometry(size, size),
-				new MeshBasicMaterial({ map: glowTexture, color, transparent: true, opacity, depthWrite: false }),
-			);
-			m.position.set(x, y, -420);
-			scene.add(m);
-			glows.push(m);
-			return m;
+		// One solid backdrop with soft light painted in. Glass (transmission) only
+		// refracts opaque objects, so the light has to live on an opaque surface.
+		const backdropCanvas = document.createElement("canvas");
+		backdropCanvas.width = 1600;
+		backdropCanvas.height = 1000;
+		const bg = backdropCanvas.getContext("2d")!;
+		const hex = (c: Color) => `#${c.getHexString()}`;
+		const paintBackdrop = (t: number) => {
+			bg.fillStyle = hex(darkGreen);
+			bg.fillRect(0, 0, 1600, 1000);
+			const blob = (x: number, y: number, r: number, color: Color, a: number) => {
+				const g = bg.createRadialGradient(x, y, 0, x, y, r);
+				// brand colour (from the CSS variables) + an alpha byte, as 8-digit hex
+				const alpha = (v: number) => Math.round(v * 255).toString(16).padStart(2, "0");
+				g.addColorStop(0, hex(color) + alpha(a));
+				g.addColorStop(1, hex(color) + alpha(0));
+				bg.fillStyle = g;
+				bg.fillRect(0, 0, 1600, 1000);
+			};
+			blob(980 + Math.sin(t * 0.3) * 60, 430 + Math.cos(t * 0.25) * 40, 520, lightGreen, 0.95);
+			blob(1180 + Math.cos(t * 0.2) * 80, 300, 260, white, 0.55);
+			blob(640, 760 + Math.sin(t * 0.22) * 50, 420, lightGreen, 0.5);
+			blob(1350, 820, 300, white, 0.18);
 		};
-		addGlow(lightGreen, 1300, -60, 40, 1);
-		addGlow(white, 560, 180, 120, 0.55);
-		addGlow(lightGreen, 900, 520, -200, 0.6);
-		addGlow(white, 420, -420, -160, 0.25);
+		paintBackdrop(0);
+		const backdropTexture = new CanvasTexture(backdropCanvas);
+		backdropTexture.colorSpace = SRGBColorSpace;
+		const backdrop = new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ map: backdropTexture, toneMapped: false }));
+		backdrop.position.z = -700;
+		scene.add(backdrop);
 
 		// Extrude the two insignia shapes from the real logo file.
 		const tpl = root.querySelector<HTMLTemplateElement>("template[data-svg]")!;
@@ -164,6 +167,10 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 			renderer.setSize(w, h, false);
 			camera.aspect = w / h;
 			camera.updateProjectionMatrix();
+			// size the backdrop to fill the view at its depth
+			const dist = camera.position.z - backdrop.position.z;
+			const vh = 2 * Math.tan((camera.fov * Math.PI) / 360) * dist;
+			backdrop.scale.set(vh * camera.aspect * 1.05, vh * 1.05, 1);
 			const s = Math.min(w / 1440, h / 900);
 			const scale = (mobile ? 0.8 : 0.95) * Math.max(0.55, s);
 			holder.scale.setScalar(scale);
@@ -194,6 +201,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 
 		const t0 = performance.now();
 		let smooth = 0;
+		let lastPaint = -1;
 		const frame = () => {
 			requestAnimationFrame(frame);
 			const y = scrollY;
@@ -229,10 +237,12 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 				part.rotation.set(dir * e * 1.2, dir * (open * 0.35 + e * 1.4), dir * e * 0.8);
 			});
 
-			glows.forEach((g, i) => {
-				g.position.x += Math.sin(t * 0.3 + i * 2) * 0.25;
-				g.position.y += Math.cos(t * 0.25 + i) * 0.2;
-			});
+			// slow drift of the light; repaint ~15 times a second
+			if (Math.floor(t * 15) !== lastPaint) {
+				lastPaint = Math.floor(t * 15);
+				paintBackdrop(t);
+				backdropTexture.needsUpdate = true;
+			}
 
 			renderer.render(scene, camera);
 		};
