@@ -1,0 +1,79 @@
+/*
+  theme.css -- Sarmayacar brand theme.
+
+  Source: Sarmayacar Brand Guidelines v1.0 (March 2020), section 1.3
+  Color Palette and 1.4 Typography.
+
+  THIS IS THE ONLY FILE WHERE BRAND COLOR VALUES ARE WRITTEN.
+  Everywhere else, use the var(--sc-*) brand variables or the template's
+  semantic tokens (var(--color-brand), var(--color-text), ...).
+  `npm run check:brand` fails the build if a color literal appears
+  anywhere else in src/.
+
+  Tokens not overridden here keep their defaults from tokens.css.
+*/
+
+:root {
+	/* ---- Brand palette (manual 1.3) ---------------------------------- */
+
+	/* Primary */
+	--sc-dark-green: #13322b; /* Pantone 627 C */
+	--sc-light-green: #008675; /* Pantone 327 C */
+
+	/* Secondary: keep to less than 50% of any one piece */
+	--sc-black: #000000;
+	--sc-grey: #939598;
+	--sc-mid-grey: #b7b9bc;
+	--sc-white: #ffffff;
+
+	/* Tints (manual 1.3 "Tints"): 75%, 50%, 25% of each primary */
+	--sc-dark-green-75: color-mix(in srgb, var(--sc-dark-green) 75%, var(--sc-white));
+	--sc-dark-green-50: color-mix(in srgb, var(--sc-dark-green) 50%, var(--sc-white));
+	--sc-dark-green-25: color-mix(in srgb, var(--sc-dark-green) 25%, var(--sc-white));
+	--sc-light-green-75: color-mix(in srgb, var(--sc-light-green) 75%, var(--sc-white));
+	--sc-light-green-50: color-mix(in srgb, var(--sc-light-green) 50%, var(--sc-white));
+	--sc-light-green-25: color-mix(in srgb, var(--sc-light-green) 25%, var(--sc-white));
+	--sc-grey-75: color-mix(in srgb, var(--sc-mid-grey) 75%, var(--sc-white));
+	--sc-grey-50: color-mix(in srgb, var(--sc-mid-grey) 50%, var(--sc-white));
+	--sc-grey-25: color-mix(in srgb, var(--sc-mid-grey) 25%, var(--sc-white));
+
+	/* Image scrim behind a logo or text over photos (manual 1.2): 75% black */
+	--sc-scrim: rgb(0 0 0 / 0.75);
+
+	/* ---- Map the brand onto the template's semantic tokens ----------- */
+
+	--color-bg: light-dark(var(--sc-white), var(--sc-black));
+	--color-surface: light-dark(var(--sc-white), var(--sc-dark-green));
+	--color-sunken: light-dark(var(--sc-grey-25), var(--sc-dark-green));
+	--color-text: light-dark(var(--sc-black), var(--sc-white));
+	--color-text-secondary: light-dark(var(--sc-dark-green), var(--sc-mid-grey));
+	--color-muted: var(--sc-grey);
+
+	--color-brand: var(--sc-light-green);
+	--color-on-brand: var(--sc-white);
+	--color-brand-soft: var(--sc-light-green-75);
+	--color-accent: var(--sc-light-green);
+
+	--color-night: var(--sc-dark-green);
+	--color-on-night: var(--sc-white);
+
+	/* Flat panels: the manual's look is solid color, not glows */
+	--glow-daylight: none;
+	--glow-dusk: none;
+
+	/* ---- Typography (manual 1.4) -------------------------------------- */
+	/*
+	  Graphik for everything. Everett is for the logo only and must never
+	  be used for text. Arial is the manual's approved fallback.
+	  Graphik is a licensed font: its web font files go in
+	  public/fonts/ with @font-face rules below once the client supplies
+	  them.
+	*/
+	--font-body: "Graphik", Arial, Helvetica, sans-serif;
+	--font-display: "Graphik", Arial, Helvetica, sans-serif;
+	--font-heading: var(--font-body);
+	--font-weight-heading: 500;
+	--font-weight-display: 500; /* Graphik Medium, per the type specimen */
+	--tracking-tight: -0.02em;
+	--tracking-snug: -0.01em;
+}
