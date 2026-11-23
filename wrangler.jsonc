@@ -15,6 +15,14 @@
 		{
 			"binding": "DB",
 			"database_name": "sarmayacar-site",
+			"database_id": "a4577a02-7ae6-43b3-9984-627005752b89",
+		},
+	],
+	// Astro sessions (created by the first deploy). Previews need the id spelled out.
+	"kv_namespaces": [
+		{
+			"binding": "SESSION",
+			"id": "24c3a6891d71448a91825539913ab8f0",
 		},
 	],
 	"r2_buckets": [
