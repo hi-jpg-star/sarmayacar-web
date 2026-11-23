@@ -117,6 +117,8 @@ if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
 
 	.tl__rail {
 		overflow-x: auto;
+		/* snapping aligns items to the padded edge, not the screen edge */
+		scroll-padding-inline: max(var(--sc-gutter), (100vw - var(--sc-max)) / 2);
 		scrollbar-width: none;
 		cursor: grab;
 		scroll-snap-type: x proximity;
