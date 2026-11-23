@@ -10,12 +10,13 @@
  * migrations are required". Running `emdash migrate` here applies them from
  * the build machine instead, before the new code goes live.
  *
- * The D1 database is taken from wrangler.jsonc. Cloudflare's build
- * environment supplies the account and API token.
+ * The D1 database is looked up by name; Cloudflare's build environment
+ * supplies the API token.
  */
 import { spawnSync } from "node:child_process";
 
-const TARGET = ["--wrangler-config", "wrangler.jsonc"];
+const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID || "fa9e64d6abc8988153599baef2fe247e";
+const DB_NAME = "sarmayacar-site"; // must match d1_databases[0].database_name in wrangler.jsonc
 
 function run(args, { capture = false } = {}) {
 	const result = spawnSync("npx", args, {
@@ -24,6 +25,19 @@ function run(args, { capture = false } = {}) {
 	});
 	return { code: result.status ?? 1, out: result.stdout ?? "" };
 }
+
+// 0. Look up the D1 database's UUID by name (emdash migrate needs the UUID).
+const list = run(["wrangler", "d1", "list", "--json"], { capture: true });
+let databaseId;
+try {
+	databaseId = JSON.parse(list.out).find((db) => db.name === DB_NAME)?.uuid;
+} catch {}
+if (!databaseId) {
+	console.error(`Could not find the D1 database "${DB_NAME}" in this account; not deploying.`);
+	process.exit(1);
+}
+console.log(`D1 database ${DB_NAME}: ${databaseId}`);
+const TARGET = ["--d1", databaseId, "--account-id", ACCOUNT_ID];
 
 // 1. Inspect the target database and read its fingerprint.
 //    Exit code 2 means "migrations pending", which is expected.
