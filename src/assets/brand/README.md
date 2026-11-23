@@ -1,9 +1,10 @@
 # Brand assets
 
-Put the official Sarmayacar logo files here (SVG preferred, PNG fallback):
+Official Sarmayacar logo files. Do not edit, redraw or recolor them. See "Logo" in AGENTS.md.
 
-- `insignia.svg` — the green mark on its own (favicon, social avatars)
-- `logo-dark.svg` — insignia + black wordmark, for light backgrounds
-- `logo-light.svg` — insignia + white wordmark, for dark backgrounds
-
-Do not edit, redraw or recolor these files. See "Logo" in AGENTS.md.
+| File | Use |
+|---|---|
+| `logo-dark.svg` | Green insignia + black wordmark, for white or light backgrounds |
+| `logo-light.svg` | Green insignia + white wordmark, for black or Dark Green backgrounds |
+| `insignia.svg` | Green insignia alone: favicon, social avatars, small spaces. The default. |
+| `insignia-black.svg` / `insignia-white.svg` | One-color insignia, only where color printing or contrast makes green impossible |
