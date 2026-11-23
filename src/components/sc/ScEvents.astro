@@ -33,8 +33,10 @@ const link = href(value.link_url);
 			{
 				entries.map((ev, i) => {
 					const d = monthYear(ev.data.event_date);
+					const count = (ev.data.cover ? 1 : 0) + (ev.data.gallery?.length ?? 0);
 					return (
 						<li class="ev__card">
+							<button type="button" class="ev__open" data-gallery={ev.id} aria-label={`${ev.data.title}: view ${count} photos`}>
 							<figure>
 								<div class="ev__img">
 									{ev.data.cover && <Image image={ev.data.cover} sizes="(max-width: 760px) 80vw, 34vw" alt="" />}
@@ -48,7 +50,14 @@ const link = href(value.link_url);
 										</span>
 									)}
 								</figcaption>
+								{count > 1 && <span class="ev__count sc-label">{count} photos</span>}
 							</figure>
+							</button>
+							<template data-gallery-for={ev.id} data-title={ev.data.title} data-date={d ? `${d.month} ${d.year}` : ""}>
+								{[ev.data.cover, ...(ev.data.gallery ?? []).map((g) => g.image)].filter(Boolean).map((img) => (
+									<Image image={img!} sizes="90vw" alt="" loading="lazy" />
+								))}
+							</template>
 						</li>
 					);
 				})
@@ -57,7 +66,88 @@ const link = href(value.link_url);
 	</div>
 </section>
 
+<div class="gv tone-black" hidden role="dialog" aria-modal="true" aria-label="Event photos" data-viewer>
+	<div class="gv__top sc-container">
+		<p class="gv__title"><span data-v-title></span> <span class="gv__date" data-v-date></span></p>
+		<p class="gv__counter sc-label" data-v-counter></p>
+		<button type="button" class="gv__close" data-v-close aria-label="Close photos">Close <span aria-hidden="true">×</span></button>
+	</div>
+	<div class="gv__stage" data-v-stage></div>
+	<button type="button" class="gv__nav gv__nav--prev" data-v-prev aria-label="Previous photo">←</button>
+	<button type="button" class="gv__nav gv__nav--next" data-v-next aria-label="Next photo">→</button>
+	<div class="gv__thumbs" data-v-thumbs></div>
+</div>
+
 <script>
+	// Full-screen photo viewer for an event's cover + gallery.
+	const viewer = document.querySelector<HTMLElement>("[data-viewer]");
+	if (viewer) {
+		const stage = viewer.querySelector<HTMLElement>("[data-v-stage]")!;
+		const thumbs = viewer.querySelector<HTMLElement>("[data-v-thumbs]")!;
+		const counter = viewer.querySelector<HTMLElement>("[data-v-counter]")!;
+		let imgs: HTMLImageElement[] = [];
+		let idx = 0;
+		let opener: HTMLElement | null = null;
+		const show = (i: number) => {
+			idx = (i + imgs.length) % imgs.length;
+			imgs.forEach((im, j) => im.classList.toggle("is-on", j === idx));
+			[...thumbs.children].forEach((t, j) => t.classList.toggle("is-on", j === idx));
+			(thumbs.children[idx] as HTMLElement | undefined)?.scrollIntoView({ inline: "center", block: "nearest" });
+			counter.textContent = `${String(idx + 1).padStart(2, "0")} / ${String(imgs.length).padStart(2, "0")}`;
+		};
+		const open = (id: string, from: HTMLElement) => {
+			const tpl = document.querySelector<HTMLTemplateElement>(`template[data-gallery-for="${CSS.escape(id)}"]`);
+			if (!tpl) return;
+			opener = from;
+			viewer.querySelector("[data-v-title]")!.textContent = tpl.dataset.title || "";
+			viewer.querySelector("[data-v-date]")!.textContent = tpl.dataset.date || "";
+			stage.replaceChildren(tpl.content.cloneNode(true));
+			imgs = [...stage.querySelectorAll("img")];
+			imgs.forEach((im) => (im.loading = "eager"));
+			thumbs.replaceChildren(
+				...imgs.map((im, j) => {
+					const b = document.createElement("button");
+					b.type = "button";
+					b.setAttribute("aria-label", `Photo ${j + 1}`);
+					const t = im.cloneNode() as HTMLImageElement;
+					t.sizes = "120px";
+					b.append(t);
+					b.addEventListener("click", () => show(j));
+					return b;
+				}),
+			);
+			viewer.hidden = false;
+			document.documentElement.style.overflow = "hidden";
+			requestAnimationFrame(() => viewer.classList.add("is-open"));
+			show(0);
+			viewer.querySelector<HTMLElement>("[data-v-close]")!.focus();
+		};
+		const close = () => {
+			viewer.classList.remove("is-open");
+			document.documentElement.style.overflow = "";
+			setTimeout(() => (viewer.hidden = true), 400);
+			opener?.focus();
+		};
+		document.querySelectorAll<HTMLElement>("[data-gallery]").forEach((b) =>
+			b.addEventListener("click", () => open(b.dataset.gallery!, b)),
+		);
+		viewer.querySelector("[data-v-close]")!.addEventListener("click", close);
+		viewer.querySelector("[data-v-prev]")!.addEventListener("click", () => show(idx - 1));
+		viewer.querySelector("[data-v-next]")!.addEventListener("click", () => show(idx + 1));
+		document.addEventListener("keydown", (e) => {
+			if (viewer.hidden) return;
+			if (e.key === "Escape") close();
+			if (e.key === "ArrowRight") show(idx + 1);
+			if (e.key === "ArrowLeft") show(idx - 1);
+		});
+		let sx = 0;
+		stage.addEventListener("touchstart", (e) => (sx = e.touches[0].clientX), { passive: true });
+		stage.addEventListener("touchend", (e) => {
+			const dx = e.changedTouches[0].clientX - sx;
+			if (Math.abs(dx) > 40) show(idx + (dx < 0 ? 1 : -1));
+		});
+	}
+
 	// Vertical scroll drives the strip sideways while the section is pinned.
 	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 	for (const root of document.querySelectorAll<HTMLElement>("[data-events]")) {
@@ -172,6 +262,195 @@ const link = href(value.link_url);
 	.ev__card:hover :global(img) {
 		filter: none;
 		transform: scale(1.05);
+	}
+
+	.ev__open {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		text-align: start;
+		cursor: zoom-in;
+	}
+
+	.ev__open figure {
+		position: relative;
+	}
+
+	.ev__count {
+		position: absolute;
+		inset-block-start: 16px;
+		inset-inline-start: 16px;
+		padding: 8px 12px;
+		background: var(--sc-black);
+		color: var(--sc-white);
+		opacity: 0;
+		transform: translateY(-6px);
+		transition: opacity 0.4s, transform 0.5s var(--sc-ease);
+	}
+
+	.ev__open:hover .ev__count,
+	.ev__open:focus-visible .ev__count {
+		opacity: 1;
+		transform: none;
+	}
+
+	/* ---- Photo viewer ---- */
+	.gv {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: grid;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+		opacity: 0;
+		transition: opacity 0.4s var(--sc-ease);
+	}
+
+	.gv.is-open {
+		opacity: 1;
+	}
+
+	.gv__top {
+		display: grid;
+		grid-template-columns: 1fr auto auto;
+		align-items: center;
+		gap: 24px;
+		padding-block: 24px;
+	}
+
+	.gv__title {
+		font-size: clamp(18px, 2vw, 26px);
+		font-weight: 500;
+		letter-spacing: -0.02em;
+	}
+
+	.gv__date {
+		color: var(--sc-grey);
+		font-weight: 400;
+		font-size: 0.7em;
+		margin-inline-start: 12px;
+	}
+
+	.gv__counter {
+		color: var(--sc-mid-grey);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.gv__close {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		font-size: 12px;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+
+	.gv__close span {
+		font-size: 22px;
+		letter-spacing: 0;
+	}
+
+	.gv__stage {
+		position: relative;
+		margin-inline: var(--sc-gutter);
+	}
+
+	.gv__stage :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		opacity: 0;
+		transform: scale(0.98);
+		transition:
+			opacity 0.5s var(--sc-ease),
+			transform 0.8s var(--sc-ease);
+	}
+
+	.gv__stage :global(img.is-on) {
+		opacity: 1;
+		transform: none;
+	}
+
+	.gv__nav {
+		position: absolute;
+		inset-block-start: 50%;
+		width: 56px;
+		height: 56px;
+		border: 1px solid var(--sc-line-on-dark);
+		background: var(--sc-black);
+		color: var(--sc-white);
+		font-size: 20px;
+		cursor: pointer;
+		transition: background 0.3s, color 0.3s;
+	}
+
+	.gv__nav:hover {
+		background: var(--sc-white);
+		color: var(--sc-black);
+	}
+
+	.gv__nav--prev {
+		inset-inline-start: 16px;
+	}
+
+	.gv__nav--next {
+		inset-inline-end: 16px;
+	}
+
+	.gv__thumbs {
+		display: flex;
+		gap: 8px;
+		padding: 20px var(--sc-gutter) 24px;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.gv__thumbs button {
+		flex: 0 0 96px;
+		height: 64px;
+		padding: 0;
+		border: 0;
+		background: none;
+		cursor: pointer;
+		opacity: 0.4;
+		outline-offset: 2px;
+		transition: opacity 0.3s;
+	}
+
+	.gv__thumbs button.is-on,
+	.gv__thumbs button:hover {
+		opacity: 1;
+	}
+
+	.gv__thumbs :global(img) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	@media (max-width: 760px) {
+		.gv__nav {
+			display: none;
+		}
+
+		.gv__top {
+			grid-template-columns: 1fr auto;
+		}
+
+		.gv__counter {
+			display: none;
+		}
 	}
 
 	.ev__card figcaption {

@@ -10,7 +10,7 @@ const { value } = Astro.props;
 const w = words(value.text);
 ---
 
-<section class="mf tone-dark sc-columns" data-tone="dark" id={value.anchor_id || undefined} data-manifesto>
+<section class="mf tone-dark" data-tone="dark" id={value.anchor_id || undefined} data-manifesto data-glass-stage>
 	<div class="mf__inner sc-container">
 		{value.label && <p class="sc-label sc-label--rule mf__label">{value.label}</p>}
 		<p class="mf__text" aria-label={value.text}>
@@ -51,6 +51,13 @@ const w = words(value.text);
 		padding-block: clamp(120px, 16vw, 240px);
 	}
 
+	:global(body:has(.glass)) .mf {
+		background: transparent;
+		min-height: 140svh;
+		display: grid;
+		align-items: center;
+	}
+
 	.mf__inner {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
@@ -65,10 +72,10 @@ const w = words(value.text);
 	}
 
 	.mf__text {
-		font-size: clamp(30px, 4.2vw, 64px);
-		font-weight: 300;
-		line-height: 1.14;
-		letter-spacing: -0.025em;
+		font-size: clamp(30px, 4.4vw, 68px);
+		font-weight: 500;
+		line-height: 1.08;
+		letter-spacing: -0.035em;
 	}
 
 	.mf__w {

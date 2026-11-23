@@ -65,6 +65,17 @@
 							"type": "image"
 						},
 						{
+							"slug": "layout",
+							"label": "Layout (home = giant logo + 3D glass insignia)",
+							"type": "select",
+							"validation": {
+								"options": [
+									"standard",
+									"home"
+								]
+							}
+						},
+						{
 							"slug": "anchor_id",
 							"label": "Section ID (lowercase, for links like /#events)",
 							"type": "string",
@@ -730,6 +741,68 @@
 							"slug": "label",
 							"label": "Small label (e.g. BACKED BY SARMAYACAR)",
 							"type": "string"
+						},
+						{
+							"slug": "anchor_id",
+							"label": "Section ID (lowercase, for links like /#events)",
+							"type": "string",
+							"validation": {
+								"pattern": "^(?:$|[a-z][a-z0-9_-]*)$"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"slug": "sc_approach",
+			"label": "Approach",
+			"description": "Numbered principles beside a sticky headline; the one in view is highlighted",
+			"icon": "list",
+			"category": "Sarmayacar",
+			"currentVersion": 1,
+			"versions": [
+				{
+					"version": 1,
+					"fields": [
+						{
+							"slug": "headline",
+							"label": "Headline",
+							"type": "string",
+							"required": true
+						},
+						{
+							"slug": "label",
+							"label": "Small label (e.g. OUR APPROACH)",
+							"type": "string"
+						},
+						{
+							"slug": "intro",
+							"label": "Intro text",
+							"type": "text"
+						},
+						{
+							"slug": "items",
+							"label": "Principles",
+							"type": "repeater",
+							"required": true,
+							"validation": {
+								"minItems": 1,
+								"maxItems": 8,
+								"subFields": [
+									{
+										"slug": "title",
+										"label": "Title",
+										"type": "string",
+										"required": true
+									},
+									{
+										"slug": "text",
+										"label": "Text",
+										"type": "text"
+									}
+								]
+							}
 						},
 						{
 							"slug": "anchor_id",
@@ -1575,6 +1648,7 @@
 							"sc_manifesto",
 							"sc_numbers",
 							"sc_marquee",
+							"sc_approach",
 							"sc_faqs",
 							"marketing_hero",
 							"marketing_features",
@@ -2017,8 +2091,8 @@
 				"slug": "home",
 				"status": "published",
 				"seo": {
-					"title": "Sarmayacar — Pakistan's Leading Venture Capital Firm",
-					"description": "Sarmayacar backs daring entrepreneurs building market-transforming technology companies in Pakistan."
+					"title": "Sarmayacar | Early-stage venture capital in Pakistan",
+					"description": "Sarmayacar is an early-stage venture capital firm in Lahore and Karachi backing daring founders building technology companies in Pakistan."
 				},
 				"data": {
 					"title": "Home",
@@ -2027,45 +2101,73 @@
 							"_type": "sc_hero",
 							"_version": 1,
 							"_key": "hero",
-							"eyebrow": "Venture capital · Pakistan · Since 2016",
-							"headline": "Pakistan's leading venture capital firm.",
-							"subheadline": "We back daring entrepreneurs building market-transforming technology companies in Pakistan.",
-							"cta_label": "Get funding",
+							"layout": "home",
+							"eyebrow": "Early-stage venture capital, Pakistan",
+							"headline": "We back Pakistan's daring founders.",
+							"subheadline": "Early-stage venture capital from Lahore and Karachi, bringing international investment practice to technology companies built in Pakistan.",
+							"cta_label": "Apply for funding",
 							"cta_url": "/get-funding"
 						},
 						{
 							"_type": "sc_manifesto",
 							"_version": 1,
 							"_key": "manifesto",
-							"label": "Our conviction",
-							"text": "We bring international investment practice to Pakistan and put it to work through a team that knows the market, its culture and its founders. We invest ourselves in people, and our money in their companies."
+							"label": "What we believe",
+							"text": "Iconic companies will be built in Pakistan. They need more than a cheque. They need international investment practice, applied on the ground by people who know the culture, the history and the market, and who stay. We invest ourselves in people, and our money in their companies."
+						},
+						{
+							"_type": "sc_approach",
+							"_version": 1,
+							"_key": "approach",
+							"anchor_id": "approach",
+							"label": "Our approach",
+							"headline": "Adding value beyond capital.",
+							"intro": "Our team comes from banking, private equity and company building. We back founders from the first idea to the later rounds, and we stay for the long term.",
+							"items": [
+								{
+									"title": "International practice, local ground",
+									"text": "We bring the standards of international venture investing to Pakistan and apply them through a team on the ground that knows the culture, the history and how business is done here. Both matter. Neither is enough alone."
+								},
+								{
+									"title": "Conviction-led decisions",
+									"text": "We decide together, on evidence, and we decide clearly. When we back a founder, we put our judgment on the line and follow through on what we commit. Founders and investors get the same transparency from us."
+								},
+								{
+									"title": "First cheque to follow-on",
+									"text": "Our Operator Angels back pre-revenue ideas with capital and mentorship from founders who have built companies themselves. Our main fund writes larger cheques as companies grow, and we work with founders on follow-on funding."
+								},
+								{
+									"title": "Here for good",
+									"text": "We build long-term partnerships, not transactions. We help founders navigate the local market and make strategic decisions. We care about our impact on the community, value diverse teams and share what we learn."
+								}
+							]
 						},
 						{
 							"_type": "sc_numbers",
 							"_version": 1,
 							"_key": "numbers",
-							"label": "Since 2016",
+							"label": "Our record",
 							"anchor_id": "track-record",
 							"items": [
 								{
-									"value": "2016",
-									"label": "Started as an angel syndicate",
-									"note": "Incorporated as a VC fund in 2018"
-								},
-								{
 									"value": "$25m",
 									"label": "First fund closed",
-									"note": "May 2021, with IFC as an investor"
-								},
-								{
-									"value": "25+",
-									"label": "Companies backed",
-									"note": "Across Ventures and Operator Angels"
+									"note": "Closed May 2021. IFC joined the fund in 2019."
 								},
 								{
 									"value": "1st",
 									"label": "Series B in Pakistan",
-									"note": "Closed into Bykea, 2020"
+									"note": "Closed into Bykea, September 2020."
+								},
+								{
+									"value": "25",
+									"label": "Companies backed",
+									"note": "15 Ventures and 10 Operator Angel companies."
+								},
+								{
+									"value": "2018",
+									"label": "Incorporated as a VC fund",
+									"note": "Grown from our angel syndicate. First close August 2018."
 								}
 							]
 						},
@@ -2074,24 +2176,24 @@
 							"_version": 1,
 							"_key": "sectors",
 							"anchor_id": "sectors",
-							"headline": "Investing in Pakistan's future",
-							"subheadline": "We make value-add investments across sectors with large, attractive markets and real growth potential.",
-							"link_label": "View the portfolio",
+							"headline": "Sector agnostic. Pakistan focused.",
+							"subheadline": "From fintech, healthtech and logistics to agritech, edtech and gaming, we back technology companies built for Pakistan.",
+							"link_label": "Explore the portfolio",
 							"link_url": "/portfolio"
 						},
 						{
 							"_type": "sc_marquee",
 							"_version": 1,
 							"_key": "marquee",
-							"label": "Backed by Sarmayacar"
+							"label": "Companies we back"
 						},
 						{
 							"_type": "sc_press",
 							"_version": 1,
 							"_key": "press",
-							"headline": "Sarmayacar in the press",
+							"headline": "In the press",
 							"count": 5,
-							"link_label": "All news",
+							"link_label": "Read all news",
 							"link_url": "/news"
 						},
 						{
@@ -2099,9 +2201,9 @@
 							"_version": 1,
 							"_key": "events",
 							"anchor_id": "events",
-							"headline": "Events",
+							"headline": "Where founders meet",
 							"count": 7,
-							"link_label": "View all",
+							"link_label": "See all events",
 							"link_url": "/news#events"
 						},
 						{
@@ -2109,11 +2211,11 @@
 							"_version": 1,
 							"_key": "closing",
 							"layout": "closing",
-							"eyebrow": "Get funding",
-							"headline": "Building something daring?",
-							"body": "Our funds are sector agnostic and focused on Pakistan. Tell us what you're building and our team will be in touch.",
-							"cta_label": "Get funding",
-							"cta_url": "/get-funding"
+							"eyebrow": "For founders",
+							"headline": "Build with us.",
+							"body": "Whether you have an idea that needs mentorship or a company ready for a larger cheque, we want to hear from you. Tell us what you are building.",
+							"cta_label": "Apply for funding",
+							"cta_url": "https://tally.so/r/nP5AJd"
 						}
 					]
 				}

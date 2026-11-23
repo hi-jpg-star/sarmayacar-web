@@ -29,6 +29,16 @@ html {
 	background: var(--sc-white);
 }
 
+/* Home page: the fixed glass scene sits behind transparent stage sections */
+html:has(.glass) {
+	background: var(--sc-dark-green);
+}
+
+body:has(.glass) {
+	background: transparent;
+}
+
+
 body {
 	background: var(--sc-white);
 	color: var(--sc-black);
@@ -87,28 +97,10 @@ body {
 	--sc-muted: var(--sc-grey);
 }
 
-/* Faint vertical column lines behind a section (Elaia / Brikken style) */
+/* .sc-columns used to draw faint column lines; the client prefers a clean
+   background, so it now only creates a stacking context. */
 .sc-columns {
 	isolation: isolate;
-}
-
-.sc-columns::before {
-	content: "";
-	position: absolute;
-	inset: 0;
-	z-index: -1;
-	width: min(100% - var(--sc-gutter) * 2, var(--sc-max));
-	margin-inline: auto;
-	pointer-events: none;
-	background-image: linear-gradient(to right, var(--sc-rule) 1px, transparent 1px);
-	background-size: calc(100% / 4) 100%;
-	border-inline-end: 1px solid var(--sc-rule);
-}
-
-@media (max-width: 720px) {
-	.sc-columns::before {
-		background-size: 50% 100%;
-	}
 }
 
 /* ---- Type ---------------------------------------------------------------- */
@@ -133,18 +125,18 @@ body {
 }
 
 .sc-display {
-	font-weight: 300;
+	font-weight: 500;
 	font-size: clamp(48px, 8.2vw, 136px);
-	line-height: 0.98;
-	letter-spacing: -0.04em;
+	line-height: 0.94;
+	letter-spacing: -0.05em;
 	text-wrap: balance;
 }
 
 .sc-h2 {
-	font-weight: 300;
+	font-weight: 500;
 	font-size: clamp(36px, 5vw, 76px);
-	line-height: 1.02;
-	letter-spacing: -0.03em;
+	line-height: 0.98;
+	letter-spacing: -0.04em;
 	text-wrap: balance;
 }
 

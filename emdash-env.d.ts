@@ -110,6 +110,7 @@ export interface PageContentScHeroV1Block {
   "cta_url"?: string | null;
   "video"?: { id: string; url?: string; src?: string; filename?: string; mimeType?: string; size?: number; provider?: string; meta?: Record<string, unknown> } | null;
   "image"?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } } | null;
+  "layout"?: "standard" | "home" | null;
   "anchor_id"?: string | null;
 }
 
@@ -301,6 +302,19 @@ export interface PageContentScMarqueeV1Block {
 
 export type PageContentScMarqueeBlock = PageContentScMarqueeV1Block;
 
+export interface PageContentScApproachV1Block {
+  _type: "sc_approach";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "label"?: string | null;
+  "intro"?: string | null;
+  "items": { "title": string; "text"?: string | null }[];
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScApproachBlock = PageContentScApproachV1Block;
+
 export interface PageContentScFaqsV1Block {
   _type: "sc_faqs";
   _version: 1;
@@ -459,7 +473,7 @@ export interface PageContentMarketingTextV1Block {
 
 export type PageContentMarketingTextBlock = PageContentMarketingTextV1Block;
 
-export type PageContentBlock = PageContentScHeroBlock | PageContentScStatementBlock | PageContentScSectorsBlock | PageContentScPressBlock | PageContentScEventsBlock | PageContentScPortfolioBlock | PageContentScTeamBlock | PageContentScNewsFeedBlock | PageContentScValuesBlock | PageContentScTimelineBlock | PageContentScTextBlock | PageContentScImageCardBlock | PageContentScIntroBlock | PageContentScManifestoBlock | PageContentScNumbersBlock | PageContentScMarqueeBlock | PageContentScFaqsBlock | PageContentMarketingHeroBlock | PageContentMarketingFeaturesBlock | PageContentMarketingTestimonialsBlock | PageContentMarketingPricingBlock | PageContentMarketingFaqBlock | PageContentMarketingLogosBlock | PageContentMarketingSplitBlock | PageContentMarketingStatsBlock | PageContentMarketingCtaBlock | PageContentMarketingContactBlock | PageContentMarketingTextBlock;
+export type PageContentBlock = PageContentScHeroBlock | PageContentScStatementBlock | PageContentScSectorsBlock | PageContentScPressBlock | PageContentScEventsBlock | PageContentScPortfolioBlock | PageContentScTeamBlock | PageContentScNewsFeedBlock | PageContentScValuesBlock | PageContentScTimelineBlock | PageContentScTextBlock | PageContentScImageCardBlock | PageContentScIntroBlock | PageContentScManifestoBlock | PageContentScNumbersBlock | PageContentScMarqueeBlock | PageContentScApproachBlock | PageContentScFaqsBlock | PageContentMarketingHeroBlock | PageContentMarketingFeaturesBlock | PageContentMarketingTestimonialsBlock | PageContentMarketingPricingBlock | PageContentMarketingFaqBlock | PageContentMarketingLogosBlock | PageContentMarketingSplitBlock | PageContentMarketingStatsBlock | PageContentMarketingCtaBlock | PageContentMarketingContactBlock | PageContentMarketingTextBlock;
 
 export interface Page {
   id: string;

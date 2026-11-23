@@ -1,46 +1,44 @@
 ---
 import { Image, type BlockComponentProps } from "emdash/ui";
 import type { PageContentBlock } from "../../../emdash-env";
-import insignia from "../../assets/brand/insignia.svg?url";
+import logoLight from "../../assets/brand/logo-light.svg?url";
 import { fileUrl, href, isExternal, words } from "../../utils/sc";
+import GlassInsignia from "./GlassInsignia.astro";
 
 type Block = Extract<PageContentBlock, { _type: "sc_hero" }>;
 type Props = BlockComponentProps<Block>;
 
 const { value, index } = Astro.props;
 const { headline, eyebrow, subheadline, cta_label, cta_url, video, image, anchor_id } = value;
-const videoSrc = fileUrl(video as never, Astro.locals as never);
+const layout = (value as { layout?: string | null }).layout;
+const isHome = layout === "home" && index === 0;
+const videoSrc = isHome ? undefined : fileUrl(video as never, Astro.locals as never);
 const cta = cta_label ? href(cta_url) : undefined;
-// The first block of the home page gets the intro curtain and full-screen treatment.
-const isFeature = index === 0 && !!videoSrc;
 const w = words(headline);
 ---
 
-{
-	isFeature && (
-		<div class="intro tone-dark" aria-hidden="true">
-			<div class="intro__lines">
-				{[0, 1, 2, 3].map((i) => (
-					<i style={`--i:${i}`} />
-				))}
-			</div>
-			<img src={insignia} alt="" class="intro__mark" width="56" height="56" />
-			<p class="intro__word sc-label">Adding value beyond capital</p>
-		</div>
-	)
-}
+{isHome && <GlassInsignia />}
 
 <section
-	class:list={["hero tone-dark sc-columns", { "hero--feature": isFeature }]}
+	class:list={["hero tone-dark", { "hero--home": isHome }]}
 	data-tone="dark"
+	data-glass-stage={isHome ? "" : undefined}
 	id={anchor_id || undefined}
 >
-	<div class="hero__head sc-container" data-reveal-group>
+	{
+		isHome && (
+			<div class="hero__logo sc-container">
+				<img src={logoLight} alt="Sarmayacar" width="1392" height="283" data-hero-logo />
+			</div>
+		)
+	}
+
+	<div class="hero__head sc-container">
 		{eyebrow && <p class="sc-label sc-label--rule hero__eyebrow" data-reveal>{eyebrow}</p>}
 		<h1 class="sc-display hero__title" aria-label={headline}>
 			{
 				w.map((word, i) => (
-					<span class="sc-line hero__word" style={`--line-i:${i}; --line-delay:${isFeature ? 1500 : 150}ms`} aria-hidden="true">
+					<span class="sc-line hero__word" style={`--line-i:${i}; --line-delay:${isHome ? 500 : 150}ms`} aria-hidden="true">
 						<span>{word}</span>
 					</span>
 				))
@@ -62,7 +60,7 @@ const w = words(headline);
 	</div>
 
 	{
-		(videoSrc || image) && (
+		!isHome && (videoSrc || image) && (
 			<div class="hero__media" data-hero-media>
 				<div class="hero__frame">
 					{videoSrc ? (
@@ -75,41 +73,16 @@ const w = words(headline);
 		)
 	}
 
-	{isFeature && <p class="hero__scroll sc-label" aria-hidden="true">Scroll<span /></p>}
+	{isHome && <p class="hero__scroll sc-label" aria-hidden="true">Scroll<span /></p>}
 </section>
 
 <script>
-	// Intro curtain: once per browser session.
-	const intro = document.querySelector<HTMLElement>(".intro");
-	if (intro) {
-		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-		let seen = false;
-		try {
-			seen = sessionStorage.getItem("sc-intro") === "1";
-			sessionStorage.setItem("sc-intro", "1");
-		} catch {}
-		if (seen || reduce) {
-			intro.remove();
-			document.documentElement.style.setProperty("--intro-skip", "1");
-			document.querySelectorAll<HTMLElement>(".hero--feature .sc-line > span").forEach((el) => {
-				el.style.transitionDelay = `calc(var(--line-i) * 90ms)`;
-			});
-		} else {
-			document.documentElement.classList.add("intro-running");
-			setTimeout(() => intro.classList.add("is-done"), 1250);
-			setTimeout(() => {
-				intro.remove();
-				document.documentElement.classList.remove("intro-running");
-			}, 2300);
-		}
-	}
-
 	// Headline words rise in on load.
 	requestAnimationFrame(() => {
 		document.querySelectorAll(".hero__title").forEach((t) => t.classList.add("is-in"));
 	});
 
-	// Media frame widens to full bleed as it scrolls up.
+	// Media frame widens to full bleed as it scrolls up (standard pages).
 	const frames = document.querySelectorAll<HTMLElement>("[data-hero-media]");
 	if (frames.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 		const tick = () => {
@@ -120,90 +93,65 @@ const w = words(headline);
 				el.style.setProperty("--p", p.toFixed(3));
 			}
 		};
-		let raf = 0;
-		addEventListener("scroll", () => {
-			cancelAnimationFrame(raf);
-			raf = requestAnimationFrame(tick);
-		}, { passive: true });
+		addEventListener("scroll", tick, { passive: true });
 		addEventListener("resize", tick);
+		tick();
+	}
+
+	// Giant logo: drifts up and fades as you scroll; the header logo takes over once it's gone.
+	const logo = document.querySelector<HTMLElement>("[data-hero-logo]");
+	if (logo) {
+		const header = document.querySelector<HTMLElement>(".sh");
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const tick = () => {
+			const r = logo.getBoundingClientRect();
+			const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height + 80)));
+			if (!reduce) {
+				logo.style.transform = `translateY(${p * -40}px) scale(${1 - p * 0.04})`;
+				logo.style.opacity = String(1 - p);
+			}
+			header?.classList.toggle("sh--hero-logo", r.bottom > 0);
+		};
+		addEventListener("scroll", tick, { passive: true });
 		tick();
 	}
 </script>
 
 <style>
-	/* ---- Intro curtain ---- */
-	.intro {
-		position: fixed;
-		inset: 0;
-		z-index: 100;
-		display: grid;
-		place-items: center;
-		align-content: center;
-		gap: 28px;
-		transition: clip-path 1s var(--sc-ease-in-out);
-		clip-path: inset(0 0 0 0);
-	}
-
-	.intro.is-done {
-		clip-path: inset(0 0 100% 0);
-	}
-
-	.intro__lines {
-		position: absolute;
-		inset: 0;
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		width: min(100% - var(--sc-gutter) * 2, var(--sc-max));
-		margin-inline: auto;
-	}
-
-	.intro__lines i {
-		border-inline-start: 1px solid var(--sc-line-on-dark);
-		transform: scaleY(0);
-		transform-origin: top;
-		animation: intro-line 1s var(--sc-ease) forwards;
-		animation-delay: calc(var(--i) * 90ms);
-	}
-
-	.intro__mark {
-		width: 56px;
-		height: 56px;
-		opacity: 0;
-		animation: intro-fade 0.9s var(--sc-ease) 0.25s forwards;
-	}
-
-	.intro__word {
-		color: var(--sc-mid-grey);
-		opacity: 0;
-		animation: intro-fade 0.9s var(--sc-ease) 0.45s forwards;
-	}
-
-	@keyframes intro-line {
-		to {
-			transform: none;
-		}
-	}
-
-	@keyframes intro-fade {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: none;
-		}
-	}
-
-	/* ---- Hero ---- */
 	.hero {
 		position: relative;
 		padding-block: calc(var(--sc-header-h) + clamp(72px, 10vw, 150px)) clamp(64px, 8vw, 120px);
 		overflow: hidden;
 	}
 
-	.hero--feature {
-		padding-block-end: 0;
+	/* Home: transparent so the glass scene shows; full screen; logo on top, text at the bottom */
+	.hero--home {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		min-height: 100svh;
+		padding-block: calc(var(--sc-header-h) + 8px) clamp(40px, 5vw, 72px);
+		background: transparent;
+		overflow: visible;
+	}
+
+	.hero__logo img {
+		display: block;
+		width: 100%;
+		height: auto;
+		transform-origin: top left;
+		animation: logo-in 1.4s var(--sc-ease) both;
+	}
+
+	@keyframes logo-in {
+		from {
+			opacity: 0;
+			transform: translateY(24px);
+			clip-path: inset(0 0 100% 0);
+		}
+		to {
+			clip-path: inset(0 0 0 0);
+		}
 	}
 
 	.hero__head {
@@ -216,9 +164,27 @@ const w = words(headline);
 		max-width: 14ch;
 	}
 
-	.hero--feature .hero__title {
-		font-size: clamp(52px, 9.6vw, 168px);
-		max-width: 12ch;
+	.hero--home .hero__head {
+		grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+		align-items: end;
+		gap: 24px clamp(32px, 5vw, 96px);
+	}
+
+	.hero--home .hero__eyebrow {
+		grid-column: 1 / -1;
+		color: var(--sc-mid-grey);
+	}
+
+	.hero--home .hero__title {
+		font-size: clamp(44px, 6.4vw, 112px);
+		max-width: 11ch;
+	}
+
+	.hero--home .hero__aside {
+		border: 0;
+		padding: 0;
+		flex-direction: column;
+		align-items: flex-start;
 	}
 
 	.hero__word {
@@ -240,21 +206,9 @@ const w = words(headline);
 		color: var(--sc-mid-grey);
 	}
 
-	.hero--feature .hero__aside {
-		transition-delay: 1.9s;
-	}
-
-	:root[style*="--intro-skip"] .hero--feature .hero__aside {
-		transition-delay: 0.4s;
-	}
-
 	.hero__media {
 		--p: 0;
 		margin-block-start: clamp(56px, 7vw, 104px);
-	}
-
-	.hero--feature .hero__media {
-		margin-block-start: clamp(64px, 8vw, 120px);
 	}
 
 	.hero__frame {
@@ -279,7 +233,7 @@ const w = words(headline);
 	.hero__scroll {
 		position: absolute;
 		inset-inline-end: var(--sc-gutter);
-		inset-block-start: calc(var(--sc-header-h) + 24px);
+		inset-block-end: clamp(40px, 5vw, 72px);
 		display: flex;
 		align-items: center;
 		gap: 12px;
@@ -313,9 +267,9 @@ const w = words(headline);
 		}
 	}
 
-	@media (max-width: 720px) {
-		.hero__frame {
-			aspect-ratio: 4 / 5;
+	@media (max-width: 860px) {
+		.hero--home .hero__head {
+			grid-template-columns: 1fr;
 		}
 
 		.hero__scroll {
@@ -323,9 +277,15 @@ const w = words(headline);
 		}
 	}
 
+	@media (max-width: 720px) {
+		.hero__frame {
+			aspect-ratio: 4 / 5;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
-		.intro {
-			display: none;
+		.hero__logo img {
+			animation: none;
 		}
 	}
 </style>
