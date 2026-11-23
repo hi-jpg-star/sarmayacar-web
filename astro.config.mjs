@@ -81,6 +81,10 @@ export default defineConfig({
 		emdash({
 			database: d1({ binding: "DB", session: "auto", coalesce: true }),
 			storage: r2({ binding: "MEDIA" }),
+			// The deploy step (scripts/cf-deploy.mjs) applies migrations. A Worker
+			// request on the free plan has too little CPU time to run them and
+			// would leave the migration lock stuck, so the site only checks.
+			migrations: { runtime: "check", dev: "auto" },
 		}),
 	],
 	devToolbar: { enabled: false },

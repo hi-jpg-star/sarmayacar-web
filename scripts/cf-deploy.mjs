@@ -47,16 +47,32 @@ if (status.code !== 0 && status.code !== 2) {
 	process.exit(status.code);
 }
 let fingerprint;
+let lock;
 try {
-	fingerprint = JSON.parse(status.out.trim().split("\n").pop()).target.fingerprint;
+	const report = JSON.parse(status.out.trim().split("\n").pop());
+	fingerprint = report.target.fingerprint;
+	lock = report.lock;
 } catch {
 	console.error("Could not read the migration target from:\n" + status.out);
 	process.exit(1);
 }
 console.log(`Migration target fingerprint: ${fingerprint}`);
 
-// 2. Apply pending migrations.
-const apply = run(["emdash", "migrate", ...TARGET, "--expected-target-fingerprint", fingerprint]);
+// 2. Apply pending migrations. A lock held for more than 15 minutes is
+//    stale (a run that was cut off), so take it over; a fresh lock means
+//    another deploy may be migrating right now, so stop.
+const STALE_LOCK_MS = 15 * 60 * 1000;
+const applyArgs = ["emdash", "migrate", ...TARGET, "--expected-target-fingerprint", fingerprint];
+if (lock) {
+	const age = Date.now() - Date.parse(lock.heldSince);
+	if (age < STALE_LOCK_MS) {
+		console.error(`Migration lock held since ${lock.heldSince}; another migration may be running. Not deploying.`);
+		process.exit(1);
+	}
+	console.log(`Taking over stale migration lock ${lock.id} (held since ${lock.heldSince}).`);
+	applyArgs.push("--take-over-lock", String(lock.id));
+}
+const apply = run(applyArgs);
 if (apply.code !== 0) {
 	console.error("Applying migrations failed; not deploying.");
 	process.exit(apply.code);
