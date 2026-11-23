@@ -4,8 +4,9 @@
  * home page. Its two interlocking parts float, follow the pointer slightly,
  * and separate and leave the frame as the visitor scrolls.
  *
- * The scene paints a solid Dark Green background; sections that should
- * show it are transparent (see the body:has(.glass) rules).
+ * The canvas is transparent and sits in front of the page (pointer-events
+ * off), so the hero text shows through the glass. The page behind is solid
+ * Dark Green (see the html:has(.glass) rules).
  * Without WebGL or with reduced motion, a still insignia image is shown.
  */
 import insigniaRaw from "../../assets/brand/insignia.svg?raw";
@@ -20,14 +21,14 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 
 <script>
 	import {
-		ACESFilmicToneMapping,
 		Color,
 		ExtrudeGeometry,
 		Group,
 		Mesh,
-		MeshPhysicalMaterial,
+		ShaderMaterial,
+		DoubleSide,
+		NormalBlending,
 		PerspectiveCamera,
-		PMREMGenerator,
 		Scene,
 		SRGBColorSpace,
 		WebGLRenderer,
@@ -35,7 +36,6 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		Vector3,
 	} from "three";
 	import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
-	import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 	const root = document.querySelector<HTMLElement>("[data-glass]");
 	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -57,17 +57,13 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		const white = brand("--sc-white");
 
 		const canvas = root.querySelector<HTMLCanvasElement>("canvas")!;
-		const renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+		const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
 		const mobile = matchMedia("(max-width: 760px)").matches;
 		renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.75));
 		renderer.outputColorSpace = SRGBColorSpace;
-		renderer.toneMapping = ACESFilmicToneMapping;
-		renderer.toneMappingExposure = 1.1;
-		renderer.setClearColor(darkGreen, 1);
+		renderer.setClearColor(darkGreen, 0); // transparent: the page shows through
 
 		const scene = new Scene();
-		const pmrem = new PMREMGenerator(renderer);
-		scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 		const camera = new PerspectiveCamera(30, 1, 1, 5000);
 		camera.position.set(0, 0, 1100);
@@ -75,19 +71,48 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		// Extrude the two insignia shapes from the real logo file.
 		const tpl = root.querySelector<HTMLTemplateElement>("template[data-svg]")!;
 		const svg = new SVGLoader().parse(tpl.innerHTML);
-		const material = new MeshPhysicalMaterial({
-			// clear "liquid" glass: fully transmissive, polished, slight dispersion at the edges
-			color: white,
-			metalness: 0,
-			roughness: 0.02,
-			transmission: 1,
-			thickness: 36,
-			ior: 1.5,
-			dispersion: 4,
-			clearcoat: 1,
-			clearcoatRoughness: 0.02,
-			specularIntensity: 1,
-			envMapIntensity: 2.2,
+		// "Liquid glass": almost clear body, bright fresnel rim and soft studio
+		// reflections. The canvas sits over the page, so real page content is
+		// what you see through the glass.
+		const material = new ShaderMaterial({
+			transparent: true,
+			depthWrite: false,
+			side: DoubleSide,
+			blending: NormalBlending,
+			uniforms: {
+				uTint: { value: lightGreen },
+				uWhite: { value: white },
+			},
+			vertexShader: `
+				varying vec3 vN;
+				varying vec3 vV;
+				void main() {
+					vec4 mv = modelViewMatrix * vec4(position, 1.0);
+					vN = normalize(normalMatrix * normal);
+					vV = normalize(-mv.xyz);
+					gl_Position = projectionMatrix * mv;
+				}`,
+			fragmentShader: `
+				uniform vec3 uTint;
+				uniform vec3 uWhite;
+				varying vec3 vN;
+				varying vec3 vV;
+				void main() {
+					vec3 n = normalize(vN);
+					if (!gl_FrontFacing) n = -n;
+					float facing = clamp(dot(n, vV), 0.0, 1.0);
+					float fres = pow(1.0 - facing, 2.6);
+					vec3 r = reflect(-vV, n);
+					// soft "softbox" reflections from above and the side
+					float top = smoothstep(0.35, 0.95, r.y);
+					float side = smoothstep(0.55, 1.0, r.x) * 0.6;
+					float spec = pow(max(dot(r, normalize(vec3(-0.4, 0.7, 0.6))), 0.0), 48.0);
+					float light = clamp(fres * 0.9 + top * 0.55 + side * 0.35 + spec * 1.2, 0.0, 1.0);
+					vec3 col = mix(uTint, uWhite, 0.55 + 0.45 * light);
+					float alpha = 0.04 + light * 0.75;
+					if (!gl_FrontFacing) alpha *= 0.45;
+					gl_FragColor = vec4(col, alpha);
+				}`,
 		});
 
 		const insignia = new Group();
@@ -210,8 +235,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 	.glass {
 		position: fixed;
 		inset: 0;
-		z-index: -1;
-		background: var(--sc-dark-green);
+		z-index: 5; /* over the page content (below the header), never catches clicks */
 		pointer-events: none;
 	}
 
