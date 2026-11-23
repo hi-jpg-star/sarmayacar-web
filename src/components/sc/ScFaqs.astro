@@ -1,0 +1,129 @@
+---
+import { getEmDashCollection } from "emdash";
+import type { BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { byOrder } from "../../utils/sc";
+import { toParagraphs } from "../../utils/text";
+
+type Block = Extract<PageContentBlock, { _type: "sc_faqs" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("faqs", { limit: 100 });
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+const faqs = [...entries].sort(byOrder);
+---
+
+<section class="fq tone-light" data-tone="light" id={value.anchor_id || undefined}>
+	<div class="sc-container fq__grid">
+		<h2 class="sc-h2 fq__title" data-reveal>{value.headline}</h2>
+		<div class="fq__list">
+			{
+				faqs.map((f, i) => (
+					<details class="fq__item" name={`faq-${value._key}`} data-reveal style={`--reveal-i:${Math.min(i, 6)}`}>
+						<summary>
+							<span class="fq__num sc-label">{String(i + 1).padStart(2, "0")}</span>
+							<span class="fq__q">{f.data.title}</span>
+							<span class="fq__icon" aria-hidden="true" />
+						</summary>
+						<div class="fq__a">
+							{toParagraphs(f.data.answer).map((p) => (
+								<p>{p}</p>
+							))}
+						</div>
+					</details>
+				))
+			}
+		</div>
+	</div>
+</section>
+
+<style>
+	.fq {
+		padding-block: clamp(96px, 12vw, 160px);
+	}
+
+	.fq__grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+		gap: 40px clamp(32px, 5vw, 96px);
+		align-items: start;
+	}
+
+	.fq__title {
+		position: sticky;
+		inset-block-start: calc(var(--sc-header-h) + 32px);
+	}
+
+	.fq__list {
+		border-block-start: 1px solid var(--sc-line);
+	}
+
+	.fq__item {
+		border-block-end: 1px solid var(--sc-line);
+	}
+
+	.fq__item summary {
+		display: grid;
+		grid-template-columns: 48px minmax(0, 1fr) 24px;
+		align-items: center;
+		gap: 16px;
+		padding-block: 26px;
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.fq__item summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.fq__num {
+		color: var(--sc-light-green);
+	}
+
+	.fq__q {
+		font-size: clamp(18px, 1.6vw, 22px);
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.fq__item summary:hover .fq__q {
+		transform: translateX(8px);
+	}
+
+	.fq__icon {
+		width: 16px;
+		height: 16px;
+		justify-self: end;
+		background:
+			linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
+			linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat;
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.fq__item[open] .fq__icon {
+		transform: rotate(45deg);
+	}
+
+	.fq__a {
+		display: grid;
+		gap: 0.9em;
+		padding: 0 40px 32px 64px;
+		font-size: 16px;
+		line-height: 1.7;
+		color: var(--sc-grey);
+	}
+
+	@media (max-width: 860px) {
+		.fq__grid {
+			grid-template-columns: 1fr;
+		}
+
+		.fq__title {
+			position: static;
+		}
+
+		.fq__a {
+			padding-inline: 0;
+		}
+	}
+</style>

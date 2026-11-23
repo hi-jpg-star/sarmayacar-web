@@ -5,6 +5,312 @@
 
 import type { BylineSummary, ContentBylineCredit, TaxonomyTerm, PortableTextBlock } from "emdash";
 
+export interface Company {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  program: "Ventures" | "Angel Operators";
+  grid_logo?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } };
+  logo?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } };
+  description?: PortableTextBlock[];
+  sector_label?: string;
+  website_label?: string;
+  website_url?: string;
+  leader_title?: string;
+  leaders?: string;
+  founded?: string;
+  partnered?: string;
+  co_investors?: string;
+  featured?: boolean;
+  sort_order?: number;
+  gallery?: { "image": { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } } }[];
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
+export interface Event {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  event_date?: string;
+  cover?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } };
+  gallery?: { "image": { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } } }[];
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
+export interface Faq {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  answer: string;
+  sort_order?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
+export interface Milestone {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  happened_on: string;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
+export interface New {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  category: "Press" | "Portfolio news" | "Newsletter";
+  published_on?: string;
+  outlet?: string;
+  outlet_logo?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } };
+  thumbnail?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } };
+  url?: string;
+  newsletter_file?: { id: string; url?: string; src?: string; filename?: string; mimeType?: string; size?: number; provider?: string; meta?: Record<string, unknown> };
+  featured?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
+export interface PageContentScHeroV1Block {
+  _type: "sc_hero";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "eyebrow"?: string | null;
+  "subheadline"?: string | null;
+  "cta_label"?: string | null;
+  "cta_url"?: string | null;
+  "video"?: { id: string; url?: string; src?: string; filename?: string; mimeType?: string; size?: number; provider?: string; meta?: Record<string, unknown> } | null;
+  "image"?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } } | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScHeroBlock = PageContentScHeroV1Block;
+
+export interface PageContentScStatementV1Block {
+  _type: "sc_statement";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "left_label"?: string | null;
+  "right_label"?: string | null;
+  "link_label"?: string | null;
+  "link_url"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScStatementBlock = PageContentScStatementV1Block;
+
+export interface PageContentScSectorsV1Block {
+  _type: "sc_sectors";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "subheadline"?: string | null;
+  "link_label"?: string | null;
+  "link_url"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScSectorsBlock = PageContentScSectorsV1Block;
+
+export interface PageContentScPressV1Block {
+  _type: "sc_press";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "count"?: number | null;
+  "link_label"?: string | null;
+  "link_url"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScPressBlock = PageContentScPressV1Block;
+
+export interface PageContentScEventsV1Block {
+  _type: "sc_events";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "count"?: number | null;
+  "link_label"?: string | null;
+  "link_url"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScEventsBlock = PageContentScEventsV1Block;
+
+export interface PageContentScPortfolioV1Block {
+  _type: "sc_portfolio";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "eyebrow"?: string | null;
+  "ventures_label"?: string | null;
+  "ventures_intro"?: string | null;
+  "angels_label"?: string | null;
+  "angels_intro"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScPortfolioBlock = PageContentScPortfolioV1Block;
+
+export interface PageContentScTeamV1Block {
+  _type: "sc_team";
+  _version: 1;
+  _key: string;
+  "intro": string;
+  "eyebrow"?: string | null;
+  "join_headline"?: string | null;
+  "join_text"?: string | null;
+  "join_email"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScTeamBlock = PageContentScTeamV1Block;
+
+export interface PageContentScNewsFeedV1Block {
+  _type: "sc_news_feed";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "eyebrow"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScNewsFeedBlock = PageContentScNewsFeedV1Block;
+
+export interface PageContentScValuesV1Block {
+  _type: "sc_values";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "items": { "icon"?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } } | null; "title": string; "description"?: string | null }[];
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScValuesBlock = PageContentScValuesV1Block;
+
+export interface PageContentScTimelineV1Block {
+  _type: "sc_timeline";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScTimelineBlock = PageContentScTimelineV1Block;
+
+export interface PageContentScTextV1Block {
+  _type: "sc_text";
+  _version: 1;
+  _key: string;
+  "body": string;
+  "headline"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScTextBlock = PageContentScTextV1Block;
+
+export interface PageContentScImageCardV1Block {
+  _type: "sc_image_card";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "body"?: string | null;
+  "link_label"?: string | null;
+  "link_url"?: string | null;
+  "image"?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } } | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScImageCardBlock = PageContentScImageCardV1Block;
+
+export interface PageContentScIntroV1Block {
+  _type: "sc_intro";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "eyebrow"?: string | null;
+  "body"?: string | null;
+  "cta_label"?: string | null;
+  "cta_url"?: string | null;
+  "layout"?: "label-left" | "text-right" | "closing" | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScIntroBlock = PageContentScIntroV1Block;
+
+export interface PageContentScManifestoV1Block {
+  _type: "sc_manifesto";
+  _version: 1;
+  _key: string;
+  "text": string;
+  "label"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScManifestoBlock = PageContentScManifestoV1Block;
+
+export interface PageContentScNumbersV1Block {
+  _type: "sc_numbers";
+  _version: 1;
+  _key: string;
+  "label"?: string | null;
+  "items": { "value": string; "label": string; "note"?: string | null }[];
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScNumbersBlock = PageContentScNumbersV1Block;
+
+export interface PageContentScMarqueeV1Block {
+  _type: "sc_marquee";
+  _version: 1;
+  _key: string;
+  "label"?: string | null;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScMarqueeBlock = PageContentScMarqueeV1Block;
+
+export interface PageContentScFaqsV1Block {
+  _type: "sc_faqs";
+  _version: 1;
+  _key: string;
+  "headline": string;
+  "anchor_id"?: string | null;
+}
+
+export type PageContentScFaqsBlock = PageContentScFaqsV1Block;
+
 export interface PageContentMarketingHeroV1Block {
   _type: "marketing_hero";
   _version: 1;
@@ -153,7 +459,7 @@ export interface PageContentMarketingTextV1Block {
 
 export type PageContentMarketingTextBlock = PageContentMarketingTextV1Block;
 
-export type PageContentBlock = PageContentMarketingHeroBlock | PageContentMarketingFeaturesBlock | PageContentMarketingTestimonialsBlock | PageContentMarketingPricingBlock | PageContentMarketingFaqBlock | PageContentMarketingLogosBlock | PageContentMarketingSplitBlock | PageContentMarketingStatsBlock | PageContentMarketingCtaBlock | PageContentMarketingContactBlock | PageContentMarketingTextBlock;
+export type PageContentBlock = PageContentScHeroBlock | PageContentScStatementBlock | PageContentScSectorsBlock | PageContentScPressBlock | PageContentScEventsBlock | PageContentScPortfolioBlock | PageContentScTeamBlock | PageContentScNewsFeedBlock | PageContentScValuesBlock | PageContentScTimelineBlock | PageContentScTextBlock | PageContentScImageCardBlock | PageContentScIntroBlock | PageContentScManifestoBlock | PageContentScNumbersBlock | PageContentScMarqueeBlock | PageContentScFaqsBlock | PageContentMarketingHeroBlock | PageContentMarketingFeaturesBlock | PageContentMarketingTestimonialsBlock | PageContentMarketingPricingBlock | PageContentMarketingFaqBlock | PageContentMarketingLogosBlock | PageContentMarketingSplitBlock | PageContentMarketingStatsBlock | PageContentMarketingCtaBlock | PageContentMarketingContactBlock | PageContentMarketingTextBlock;
 
 export interface Page {
   id: string;
@@ -169,8 +475,51 @@ export interface Page {
   terms?: Record<string, TaxonomyTerm[]>;
 }
 
+export interface Report {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  file?: { id: string; url?: string; src?: string; filename?: string; mimeType?: string; size?: number; provider?: string; meta?: Record<string, unknown> };
+  year?: number;
+  period?: string;
+  report_type?: "Monthly" | "Quarterly" | "Annual";
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
+export interface Team {
+  id: string;
+  slug: string | null;
+  status: string;
+  title: string;
+  job_title?: string;
+  photo?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown>; darkVariant?: { id: string; src?: string; alt?: string; caption?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; focalX?: number; focalY?: number; provider?: string; previewUrl?: string; meta?: Record<string, unknown> } };
+  summary?: string;
+  bio?: PortableTextBlock[];
+  linkedin?: string;
+  sort_order?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
 declare module "emdash" {
   interface EmDashCollections {
+    companies: Company;
+    events: Event;
+    faqs: Faq;
+    milestones: Milestone;
+    news: New;
     pages: Page;
+    reports: Report;
+    team: Team;
   }
 }

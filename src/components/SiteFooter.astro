@@ -1,0 +1,167 @@
+---
+/** Sarmayacar footer: logo, navigation, contact details (from the "footer_contact" menu). */
+import logoLight from "../assets/brand/logo-light.svg?url";
+
+interface MenuItem {
+	label: string;
+	url: string;
+	target?: string | null;
+	cssClasses?: string | null;
+}
+
+interface Props {
+	items: MenuItem[];
+	contact: MenuItem[];
+	siteTitle: string;
+	tagline?: string | null;
+	linkedin?: string | null;
+}
+
+const { items, contact, siteTitle, tagline, linkedin } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<footer class="sf tone-dark sc-columns" data-tone="dark">
+	<div class="sc-container">
+		<div class="sf__top">
+			<a href="/" class="sf__logo" aria-label={`${siteTitle} home`}>
+				<img src={logoLight} alt="" width="200" height="40" />
+			</a>
+			{tagline && <p class="sf__tagline">{tagline}</p>}
+		</div>
+		<div class="sf__cols">
+			<div>
+				<p class="sc-label sc-label--rule">Explore</p>
+				<ul>
+					{
+						items.map((item) => (
+							<li>
+								<a href={item.url}>{item.label}</a>
+							</li>
+						))
+					}
+				</ul>
+			</div>
+			{
+				contact.length > 0 && (
+					<div>
+						<p class="sc-label sc-label--rule">Contact</p>
+						<ul>
+							{contact.map((item) => (
+								<li>
+									<a href={item.url} target={item.url.startsWith("http") ? "_blank" : undefined} rel="noopener">
+										{item.label}
+									</a>
+								</li>
+							))}
+						</ul>
+					</div>
+				)
+			}
+			{
+				linkedin && (
+					<div>
+						<p class="sc-label sc-label--rule">Follow</p>
+						<ul>
+							<li>
+								<a href={linkedin} target="_blank" rel="noopener">
+									LinkedIn
+								</a>
+							</li>
+						</ul>
+					</div>
+				)
+			}
+		</div>
+		<div class="sf__legal">
+			<p>&copy; {year} {siteTitle}</p>
+			<a href="#main" class="sf__top-link">Back to top ↑</a>
+		</div>
+	</div>
+</footer>
+
+<style>
+	.sf {
+		position: relative;
+		padding-block: clamp(80px, 10vw, 140px) 32px;
+	}
+
+	.sf__top {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 32px;
+		padding-block-end: clamp(56px, 7vw, 96px);
+	}
+
+	.sf__logo {
+		display: block;
+		/* Brand manual 1.2: minimum 150px desktop / 200px mobile */
+		width: 200px;
+	}
+
+	.sf__logo img {
+		width: 100%;
+		height: auto;
+	}
+
+	.sf__tagline {
+		max-width: 22ch;
+		font-size: clamp(22px, 2.4vw, 34px);
+		font-weight: 300;
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+		color: var(--sc-mid-grey);
+		text-align: end;
+	}
+
+	.sf__cols {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 40px 24px;
+		padding-block: 48px;
+		border-block-start: 1px solid var(--sc-line-on-dark);
+	}
+
+	.sf__cols ul {
+		list-style: none;
+		display: grid;
+		gap: 10px;
+		margin-block-start: 24px;
+		font-size: 15px;
+		color: var(--sc-mid-grey);
+	}
+
+	.sf__cols a {
+		transition: color 0.3s;
+	}
+
+	.sf__cols a:hover {
+		color: var(--sc-white);
+	}
+
+	.sf__legal {
+		display: flex;
+		justify-content: space-between;
+		gap: 16px;
+		padding-block-start: 24px;
+		border-block-start: 1px solid var(--sc-line-on-dark);
+		font-size: 13px;
+		color: var(--sc-grey);
+	}
+
+	.sf__top-link:hover {
+		color: var(--sc-white);
+	}
+
+	@media (max-width: 800px) {
+		.sf__cols {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.sf__tagline {
+			text-align: start;
+		}
+	}
+</style>

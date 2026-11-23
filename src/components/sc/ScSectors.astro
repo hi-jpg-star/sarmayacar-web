@@ -1,0 +1,263 @@
+---
+import { getEmDashCollection, getTaxonomyTerms } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { byOrder, href } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_sectors" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const [{ entries, cacheHint }, terms] = await Promise.all([
+	getEmDashCollection("companies", { limit: 200 }),
+	getTaxonomyTerms("sector"),
+]);
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+
+const companies = entries.filter((c) => c.data.program === "Ventures").sort(byOrder);
+const sectors = (terms ?? [])
+	.map((term) => ({
+		slug: term.slug,
+		label: term.label,
+		companies: companies.filter((c) => (c.data.terms?.sector ?? []).some((t) => t.slug === term.slug)),
+	}))
+	.filter((s) => s.companies.length > 0);
+const link = href(value.link_url);
+const uid = `sectors-${value._key}`;
+---
+
+<section class="sx tone-light sc-columns" data-tone="light" id={value.anchor_id || undefined}>
+	<div class="sc-container">
+		<header class="sx__head">
+			<h2 class="sc-h2" data-reveal>{value.headline}</h2>
+			{value.subheadline && <p class="sc-lead sc-muted" data-reveal style="--reveal-i:1">{value.subheadline}</p>}
+		</header>
+
+		<div class="sx__body" data-sectors>
+			<ul class="sx__list" role="tablist" aria-label="Sectors">
+				{
+					sectors.map((s, i) => (
+						<li role="presentation">
+							<button
+								type="button"
+								role="tab"
+								class="sx__tab"
+								id={`${uid}-tab-${s.slug}`}
+								aria-controls={`${uid}-panel-${s.slug}`}
+								aria-selected={i === 0 ? "true" : "false"}
+								tabindex={i === 0 ? 0 : -1}
+							>
+								<span class="sx__name">{s.label}</span>
+								<sup class="sx__count">{String(s.companies.length).padStart(2, "0")}</sup>
+							</button>
+						</li>
+					))
+				}
+			</ul>
+
+			<div class="sx__stage">
+				{
+					sectors.map((s, i) => (
+						<div
+							class="sx__panel"
+							role="tabpanel"
+							id={`${uid}-panel-${s.slug}`}
+							aria-labelledby={`${uid}-tab-${s.slug}`}
+							hidden={i !== 0}
+						>
+							<p class="sc-label sx__panel-label">{s.label}</p>
+							<ul class="sx__logos">
+								{s.companies.map((c, j) => (
+									<li style={`--j:${j}`}>
+										<a href={`/portfolio#${c.id}`} class="sx__logo" aria-label={c.data.title}>
+											{c.data.grid_logo || c.data.logo ? (
+												<Image image={(c.data.grid_logo || c.data.logo)!} sizes="220px" alt={c.data.title} />
+											) : (
+												<span>{c.data.title}</span>
+											)}
+										</a>
+										<span class="sx__meta">{c.data.sector_label || c.data.title}</span>
+									</li>
+								))}
+							</ul>
+						</div>
+					))
+				}
+				{
+					link && value.link_label && (
+						<a href={link} class="sc-link sx__more">
+							{value.link_label}
+						</a>
+					)
+				}
+			</div>
+		</div>
+	</div>
+</section>
+
+<script>
+	for (const root of document.querySelectorAll<HTMLElement>("[data-sectors]")) {
+		const tabs = [...root.querySelectorAll<HTMLButtonElement>(".sx__tab")];
+		const select = (tab: HTMLButtonElement, focus = false) => {
+			for (const t of tabs) {
+				const on = t === tab;
+				t.setAttribute("aria-selected", String(on));
+				t.tabIndex = on ? 0 : -1;
+				const panel = document.getElementById(t.getAttribute("aria-controls")!);
+				if (panel) panel.hidden = !on;
+			}
+			if (focus) tab.focus();
+		};
+		tabs.forEach((tab, i) => {
+			tab.addEventListener("mouseenter", () => select(tab));
+			tab.addEventListener("focus", () => select(tab));
+			tab.addEventListener("click", () => select(tab));
+			tab.addEventListener("keydown", (e) => {
+				const d = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : 0;
+				if (!d) return;
+				e.preventDefault();
+				select(tabs[(i + d + tabs.length) % tabs.length], true);
+			});
+		});
+	}
+</script>
+
+<style>
+	.sx {
+		padding-block: clamp(96px, 12vw, 176px);
+	}
+
+	.sx__head {
+		display: grid;
+		grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+		align-items: end;
+		gap: 32px;
+		margin-block-end: clamp(48px, 6vw, 96px);
+	}
+
+	.sx__body {
+		display: grid;
+		grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+		gap: clamp(32px, 5vw, 96px);
+		align-items: start;
+	}
+
+	.sx__list {
+		list-style: none;
+		border-block-start: 1px solid var(--sc-line);
+	}
+
+	.sx__list li {
+		border-block-end: 1px solid var(--sc-line);
+	}
+
+	.sx__tab {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		width: 100%;
+		padding-block: 10px;
+		border: 0;
+		background: none;
+		cursor: pointer;
+		text-align: start;
+		font: inherit;
+		color: var(--sc-mid-grey);
+		transition: color 0.4s var(--sc-ease);
+	}
+
+	.sx__name {
+		font-size: clamp(32px, 4.4vw, 68px);
+		font-weight: 300;
+		line-height: 1.05;
+		letter-spacing: -0.03em;
+		transition: transform 0.6s var(--sc-ease);
+	}
+
+	.sx__count {
+		font-size: 12px;
+		letter-spacing: 0.1em;
+		padding-block-start: 0.6em;
+	}
+
+	.sx__tab[aria-selected="true"] {
+		color: var(--sc-light-green);
+	}
+
+	.sx__tab[aria-selected="true"] .sx__name {
+		transform: translateX(14px);
+	}
+
+	.sx__stage {
+		position: sticky;
+		inset-block-start: calc(var(--sc-header-h) + 32px);
+		display: grid;
+		gap: 32px;
+	}
+
+	.sx__panel-label {
+		color: var(--sc-grey);
+		margin-block-end: 20px;
+	}
+
+	.sx__logos {
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1px;
+		background: var(--sc-line);
+		border: 1px solid var(--sc-line);
+	}
+
+	.sx__logos li {
+		display: grid;
+		background: var(--sc-white);
+		animation: sx-in 0.7s var(--sc-ease) both;
+		animation-delay: calc(var(--j) * 70ms);
+	}
+
+	.sx__logo {
+		display: grid;
+		place-items: center;
+		aspect-ratio: 3 / 2;
+		padding: 18%;
+		transition: background 0.4s var(--sc-ease);
+	}
+
+	.sx__logo :global(img) {
+		max-height: 64px;
+		width: auto;
+		object-fit: contain;
+		filter: grayscale(1);
+		transition: filter 0.4s, transform 0.6s var(--sc-ease);
+	}
+
+	.sx__logo:hover :global(img) {
+		filter: none;
+		transform: scale(1.05);
+	}
+
+	.sx__meta {
+		padding: 0 16px 14px;
+		font-size: 12px;
+		color: var(--sc-grey);
+	}
+
+	@keyframes sx-in {
+		from {
+			opacity: 0;
+			transform: translateY(14px);
+		}
+	}
+
+	@media (max-width: 860px) {
+		.sx__head,
+		.sx__body {
+			grid-template-columns: 1fr;
+		}
+
+		.sx__stage {
+			position: static;
+		}
+	}
+</style>

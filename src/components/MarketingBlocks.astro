@@ -12,6 +12,23 @@ import Split from "./blocks/Split.astro";
 import Stats from "./blocks/Stats.astro";
 import Testimonials from "./blocks/Testimonials.astro";
 import Text from "./blocks/Text.astro";
+import ScEvents from "./sc/ScEvents.astro";
+import ScFaqs from "./sc/ScFaqs.astro";
+import ScHero from "./sc/ScHero.astro";
+import ScImageCard from "./sc/ScImageCard.astro";
+import ScIntro from "./sc/ScIntro.astro";
+import ScManifesto from "./sc/ScManifesto.astro";
+import ScMarquee from "./sc/ScMarquee.astro";
+import ScNewsFeed from "./sc/ScNewsFeed.astro";
+import ScNumbers from "./sc/ScNumbers.astro";
+import ScPortfolio from "./sc/ScPortfolio.astro";
+import ScPress from "./sc/ScPress.astro";
+import ScSectors from "./sc/ScSectors.astro";
+import ScStatement from "./sc/ScStatement.astro";
+import ScTeam from "./sc/ScTeam.astro";
+import ScText from "./sc/ScText.astro";
+import ScTimeline from "./sc/ScTimeline.astro";
+import ScValues from "./sc/ScValues.astro";
 
 interface Props {
 	value?: PageContentBlock[] | null;
@@ -20,6 +37,23 @@ interface Props {
 const { value } = Astro.props;
 
 const marketingComponents = defineBlockComponents<PageContentBlock>({
+	sc_hero: ScHero,
+	sc_statement: ScStatement,
+	sc_sectors: ScSectors,
+	sc_press: ScPress,
+	sc_events: ScEvents,
+	sc_portfolio: ScPortfolio,
+	sc_team: ScTeam,
+	sc_news_feed: ScNewsFeed,
+	sc_values: ScValues,
+	sc_timeline: ScTimeline,
+	sc_text: ScText,
+	sc_image_card: ScImageCard,
+	sc_intro: ScIntro,
+	sc_manifesto: ScManifesto,
+	sc_numbers: ScNumbers,
+	sc_marquee: ScMarquee,
+	sc_faqs: ScFaqs,
 	marketing_hero: Hero,
 	marketing_features: Features,
 	marketing_testimonials: Testimonials,

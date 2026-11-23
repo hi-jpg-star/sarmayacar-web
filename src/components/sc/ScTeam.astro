@@ -1,0 +1,254 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, PortableText, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { byOrder, href, words } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_team" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value, index } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("team", { limit: 100 });
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+const people = [...entries].sort(byOrder);
+const uid = `tm-${value._key}`;
+const Tag = index === 0 ? "h1" : "h2";
+---
+
+<section class="tm tone-light sc-columns" data-tone="light" id={value.anchor_id || undefined} data-team>
+	<div class="sc-container">
+		<div class="tm__intro">
+			{value.eyebrow && <p class="sc-label sc-label--rule tm__eyebrow" data-reveal>{value.eyebrow}</p>}
+			<Tag class="tm__text" data-reveal-group aria-label={value.intro}>
+				{
+					words(value.intro).map((w, i) => (
+						<span class="sc-line tm__w" style={`--line-i:${Math.min(i, 30)}`} aria-hidden="true">
+							<span>{w}</span>
+						</span>
+					))
+				}
+			</Tag>
+		</div>
+
+		<ul class="tm__grid">
+			{
+				people.map((p, i) => (
+					<li data-reveal style={`--reveal-i:${i % 4}`}>
+						<button type="button" class="tm__card" data-open={`${uid}-${p.id}`}>
+							<span class="tm__photo">{p.data.photo && <Image image={p.data.photo} sizes="(max-width: 700px) 50vw, 25vw" alt="" />}</span>
+							<span class="tm__name">{p.data.title}</span>
+							<span class="tm__role">{p.data.job_title}</span>
+						</button>
+					</li>
+				))
+			}
+		</ul>
+
+		{
+			value.join_headline && (
+				<div class="tm__join" data-reveal>
+					<h2 class="sc-h3">{value.join_headline}</h2>
+					<p class="sc-muted">
+						{value.join_text}{" "}
+						{value.join_email && (
+							<a href={`mailto:${value.join_email}`} class="tm__mail">
+								{value.join_email}
+							</a>
+						)}
+					</p>
+				</div>
+			)
+		}
+	</div>
+
+	{
+		people.map((p) => {
+			const li = href(p.data.linkedin);
+			return (
+				<dialog class="sc-dialog" id={`${uid}-${p.id}`} aria-labelledby={`${uid}-${p.id}-t`}>
+					<div class="sc-dialog__panel">
+						<button type="button" class="sc-dialog__close" data-close aria-label="Close">
+							×
+						</button>
+						<div class="tmd__photo">{p.data.photo && <Image image={p.data.photo} sizes="360px" alt={p.data.title} />}</div>
+						<p class="sc-label tmd__role">{p.data.job_title}</p>
+						<h2 class="sc-h2" id={`${uid}-${p.id}-t`}>
+							{p.data.title}
+						</h2>
+						{p.data.summary && <p class="sc-lead tmd__summary">{p.data.summary}</p>}
+						{p.data.bio && (
+							<div class="sc-prose tmd__bio">
+								<PortableText value={p.data.bio} />
+							</div>
+						)}
+						{li && (
+							<a href={li} target="_blank" rel="noopener" class="sc-btn">
+								LinkedIn
+								<span class="sc-btn__arrow" />
+							</a>
+						)}
+					</div>
+				</dialog>
+			);
+		})
+	}
+</section>
+
+<script>
+	for (const root of document.querySelectorAll<HTMLElement>("[data-team]")) {
+		root.querySelectorAll<HTMLButtonElement>("[data-open]").forEach((b) =>
+			b.addEventListener("click", () => {
+				(document.getElementById(b.dataset.open!) as HTMLDialogElement | null)?.showModal();
+				document.documentElement.style.overflow = "hidden";
+			}),
+		);
+		root.querySelectorAll<HTMLDialogElement>("dialog").forEach((d) => {
+			const close = () => d.close();
+			d.querySelector("[data-close]")?.addEventListener("click", close);
+			d.addEventListener("click", (e) => {
+				if (e.target === d) close();
+			});
+			d.addEventListener("close", () => (document.documentElement.style.overflow = ""));
+		});
+	}
+</script>
+
+<style>
+	.tm {
+		padding-block: calc(var(--sc-header-h) + clamp(72px, 9vw, 140px)) clamp(96px, 12vw, 160px);
+	}
+
+	.tm__intro {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+		gap: 40px;
+		margin-block-end: clamp(64px, 8vw, 120px);
+	}
+
+	.tm__eyebrow {
+		color: var(--sc-grey);
+		padding-block-start: 0.8em;
+	}
+
+	.tm__text {
+		font-size: clamp(26px, 3.2vw, 48px);
+		font-weight: 300;
+		line-height: 1.18;
+		letter-spacing: -0.02em;
+	}
+
+	.tm__w {
+		display: inline-block;
+		margin-inline-end: 0.26em;
+	}
+
+	.tm__grid {
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: clamp(16px, 2vw, 28px);
+	}
+
+	.tm__card {
+		display: grid;
+		gap: 4px;
+		width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+		cursor: pointer;
+		font: inherit;
+		color: inherit;
+		text-align: start;
+	}
+
+	.tm__photo {
+		position: relative;
+		display: block;
+		aspect-ratio: 4 / 5;
+		overflow: hidden;
+		background: var(--sc-grey-25);
+		margin-block-end: 14px;
+	}
+
+	.tm__photo :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		/* Brand photography: muted until hovered */
+		filter: grayscale(1);
+		transition:
+			filter 0.6s var(--sc-ease),
+			transform 1s var(--sc-ease);
+	}
+
+	.tm__card:hover .tm__photo :global(img),
+	.tm__card:focus-visible .tm__photo :global(img) {
+		filter: none;
+		transform: scale(1.04);
+	}
+
+	.tm__name {
+		font-size: 20px;
+		letter-spacing: -0.01em;
+	}
+
+	.tm__role {
+		font-size: 14px;
+		color: var(--sc-grey);
+	}
+
+	.tm__join {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 16px;
+		margin-block-start: clamp(64px, 8vw, 112px);
+		padding-block-start: 32px;
+		border-block-start: 1px solid var(--sc-line);
+	}
+
+	.tm__mail {
+		color: var(--sc-light-green);
+	}
+
+	.tmd__photo {
+		width: 220px;
+		aspect-ratio: 4 / 5;
+		overflow: hidden;
+		margin-block: 72px 28px;
+	}
+
+	.tmd__photo :global(img) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.tmd__role {
+		color: var(--sc-light-green);
+		margin-block-end: 12px;
+	}
+
+	.tmd__summary {
+		margin-block: 20px;
+		color: var(--sc-grey);
+	}
+
+	.tmd__bio {
+		margin-block: 28px 36px;
+	}
+
+	@media (max-width: 900px) {
+		.tm__grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.tm__intro {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

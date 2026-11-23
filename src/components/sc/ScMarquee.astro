@@ -1,0 +1,109 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { byOrder } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_marquee" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("companies", { limit: 200 });
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+const logos = entries
+	.filter((c) => c.data.program === "Ventures" && (c.data.grid_logo || c.data.logo))
+	.sort(byOrder);
+---
+
+<section class="mq tone-dark" data-tone="dark" id={value.anchor_id || undefined}>
+	{value.label && <p class="sc-label sc-label--rule mq__label sc-container">{value.label}</p>}
+	<div class="mq__track" style={`--n:${logos.length}`}>
+		{
+			[false, true].map((dup) => (
+				<ul class="mq__group" aria-hidden={dup ? "true" : undefined}>
+					{logos.map((c) => (
+						<li>
+							<a href={`/portfolio#${c.id}`} tabindex={dup ? -1 : undefined} aria-label={c.data.title}>
+								<Image image={(c.data.grid_logo || c.data.logo)!} sizes="200px" alt={dup ? "" : c.data.title} />
+							</a>
+						</li>
+					))}
+				</ul>
+			))
+		}
+	</div>
+</section>
+
+<style>
+	.mq {
+		padding-block: clamp(56px, 7vw, 96px);
+		border-block: 1px solid var(--sc-line-on-dark);
+		overflow: hidden;
+	}
+
+	.mq__label {
+		color: var(--sc-mid-grey);
+		margin-block-end: clamp(28px, 4vw, 48px);
+	}
+
+	.mq__track {
+		display: flex;
+		width: max-content;
+		animation: mq calc(var(--n) * 3.2s) linear infinite;
+	}
+
+	.mq:hover .mq__track {
+		animation-play-state: paused;
+	}
+
+	.mq__group {
+		display: flex;
+		list-style: none;
+	}
+
+	.mq__group a {
+		display: grid;
+		place-items: center;
+		width: clamp(160px, 16vw, 240px);
+		height: 96px;
+		padding-inline: 28px;
+		border-inline-end: 1px solid var(--sc-line-on-dark);
+	}
+
+	.mq__group :global(img) {
+		max-height: 44px;
+		width: auto;
+		object-fit: contain;
+		/* turn the grey logos white on the dark band */
+		filter: grayscale(1) brightness(0) invert(1);
+		opacity: 0.7;
+		transition: opacity 0.3s;
+	}
+
+	.mq__group a:hover :global(img) {
+		opacity: 1;
+	}
+
+	@keyframes mq {
+		to {
+			transform: translateX(-50%);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mq__track {
+			animation: none;
+			flex-wrap: wrap;
+			width: auto;
+		}
+
+		.mq__group[aria-hidden] {
+			display: none;
+		}
+
+		.mq__group {
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+	}
+</style>

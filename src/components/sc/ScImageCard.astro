@@ -1,0 +1,94 @@
+---
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { href } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_image_card" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const link = href(value.link_url);
+---
+
+<section class="ic tone-black" data-tone="dark" id={value.anchor_id || undefined} data-parallax>
+	{value.image && <div class="ic__img"><Image image={value.image} sizes="100vw" alt="" /></div>}
+	<div class="ic__content sc-container">
+		<div class="ic__box" data-reveal>
+			<h2 class="sc-h2">{value.headline}</h2>
+			{value.body && <p class="ic__body">{value.body}</p>}
+			{
+				link && value.link_label && (
+					<a href={link} class="sc-link">
+						{value.link_label}
+					</a>
+				)
+			}
+		</div>
+	</div>
+</section>
+
+<script>
+	const els = document.querySelectorAll<HTMLElement>("[data-parallax]");
+	if (els.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		const tick = () => {
+			for (const el of els) {
+				const r = el.getBoundingClientRect();
+				const p = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;
+				el.style.setProperty("--y", `${(-p * 10).toFixed(2)}%`);
+			}
+		};
+		addEventListener("scroll", () => requestAnimationFrame(tick), { passive: true });
+		tick();
+	}
+</script>
+
+<style>
+	.ic {
+		position: relative;
+		display: grid;
+		align-items: end;
+		min-height: clamp(520px, 80svh, 860px);
+		overflow: hidden;
+		isolation: isolate;
+	}
+
+	.ic__img {
+		position: absolute;
+		inset: -12% 0;
+		z-index: -2;
+		transform: translateY(var(--y, 0));
+	}
+
+	.ic__img :global(img) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		filter: grayscale(0.6);
+	}
+
+	/* Scrim for legibility (brand manual: 75% black at most) */
+	.ic::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background: linear-gradient(to top, var(--sc-scrim), transparent 75%);
+	}
+
+	.ic__content {
+		padding-block: clamp(56px, 7vw, 96px);
+	}
+
+	.ic__box {
+		display: grid;
+		gap: 20px;
+		justify-items: start;
+		max-width: 620px;
+	}
+
+	.ic__body {
+		font-size: 17px;
+		line-height: 1.6;
+		color: var(--sc-grey-25);
+	}
+</style>

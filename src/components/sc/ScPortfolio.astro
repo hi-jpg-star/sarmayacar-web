@@ -1,0 +1,445 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, PortableText, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { byOrder, href } from "../../utils/sc";
+import { toParagraphs } from "../../utils/text";
+
+type Block = Extract<PageContentBlock, { _type: "sc_portfolio" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("companies", { limit: 200 });
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+
+const groups = [
+	{ key: "ventures", program: "Ventures", label: value.ventures_label || "Portfolio", intro: value.ventures_intro },
+	{ key: "angels", program: "Angel Operators", label: value.angels_label || "Operators", intro: value.angels_intro },
+].map((g) => ({ ...g, companies: entries.filter((c) => c.data.program === g.program).sort(byOrder) }))
+	.filter((g) => g.companies.length > 0);
+const uid = `pf-${value._key}`;
+---
+
+<section class="pf tone-light" data-tone="light" id={value.anchor_id || undefined} data-portfolio>
+	<div class="sc-container">
+		<div class="pf__tabs" role="tablist" aria-label={value.headline}>
+			{
+				groups.map((g, i) => (
+					<button
+						type="button"
+						role="tab"
+						class="pf__tab"
+						id={`${uid}-tab-${g.key}`}
+						aria-controls={`${uid}-panel-${g.key}`}
+						aria-selected={i === 0 ? "true" : "false"}
+					>
+						<span>{g.label}</span>
+						<sup>{String(g.companies.length).padStart(2, "0")}</sup>
+					</button>
+				))
+			}
+		</div>
+
+		{
+			groups.map((g, i) => (
+				<div class="pf__panel" role="tabpanel" id={`${uid}-panel-${g.key}`} aria-labelledby={`${uid}-tab-${g.key}`} hidden={i !== 0}>
+					{g.intro && (
+						<div class="pf__intro">
+							{toParagraphs(g.intro).map((p) => (
+								<p class="sc-lead">{p}</p>
+							))}
+						</div>
+					)}
+					<ul class="pf__grid">
+						{g.companies.map((c, j) => (
+							<li style={`--j:${j}`}>
+								<button type="button" class="pf__tile" data-open={`${uid}-dlg-${c.id}`} id={c.id}>
+									<span class="pf__logo">
+										{c.data.grid_logo || c.data.logo ? (
+											<Image image={(c.data.grid_logo || c.data.logo)!} sizes="260px" alt={c.data.title} />
+										) : (
+											<span class="pf__name-fallback">{c.data.title}</span>
+										)}
+									</span>
+									<span class="pf__caption">
+										<span>{c.data.title}</span>
+										<span class="pf__sector">{c.data.sector_label}</span>
+									</span>
+									<span class="pf__plus" aria-hidden="true" />
+								</button>
+							</li>
+						))}
+					</ul>
+				</div>
+			))
+		}
+	</div>
+
+	{
+		groups.flatMap((g) =>
+			g.companies.map((c) => {
+				const site = href(c.data.website_url);
+				return (
+					<dialog class="sc-dialog" id={`${uid}-dlg-${c.id}`} aria-labelledby={`${uid}-dlg-${c.id}-t`}>
+						<div class="sc-dialog__panel">
+							<button type="button" class="sc-dialog__close" data-close aria-label="Close">
+								×
+							</button>
+							<div class="pfd__logo">
+								{(c.data.logo || c.data.grid_logo) && <Image image={(c.data.logo || c.data.grid_logo)!} sizes="240px" alt="" />}
+							</div>
+							<p class="sc-label pfd__program">{g.label}</p>
+							<h2 class="sc-h2 pfd__title" id={`${uid}-dlg-${c.id}-t`}>
+								{c.data.title}
+							</h2>
+							<dl class="sc-meta">
+								{c.data.leaders && (
+									<div>
+										<dt>{c.data.leader_title || "CEO"}</dt>
+										<dd>{c.data.leaders}</dd>
+									</div>
+								)}
+								{c.data.founded && (
+									<div>
+										<dt>Founded</dt>
+										<dd>{c.data.founded}</dd>
+									</div>
+								)}
+								{c.data.partnered && (
+									<div>
+										<dt>Partnered</dt>
+										<dd>{c.data.partnered}</dd>
+									</div>
+								)}
+								{c.data.sector_label && (
+									<div>
+										<dt>Industry</dt>
+										<dd>{c.data.sector_label}</dd>
+									</div>
+								)}
+								{c.data.co_investors && (
+									<div>
+										<dt>Co-investors</dt>
+										<dd>{c.data.co_investors}</dd>
+									</div>
+								)}
+							</dl>
+							{c.data.description && (
+								<div class="sc-prose pfd__body">
+									<PortableText value={c.data.description} />
+								</div>
+							)}
+							{site && (
+								<a href={site} target="_blank" rel="noopener" class="sc-btn pfd__site">
+									{c.data.website_label || "Visit website"}
+									<span class="sc-btn__arrow" />
+								</a>
+							)}
+							{(c.data.gallery ?? []).length > 0 && (
+								<div class="pfd__gallery">
+									{c.data.gallery!.map((g2) => (
+										<Image image={g2.image} sizes="320px" alt="" />
+									))}
+								</div>
+							)}
+						</div>
+					</dialog>
+				);
+			}),
+		)
+	}
+</section>
+
+<script>
+	for (const root of document.querySelectorAll<HTMLElement>("[data-portfolio]")) {
+		const tabs = [...root.querySelectorAll<HTMLButtonElement>(".pf__tab")];
+		const select = (tab: HTMLButtonElement) => {
+			for (const t of tabs) {
+				const on = t === tab;
+				t.setAttribute("aria-selected", String(on));
+				const panel = document.getElementById(t.getAttribute("aria-controls")!);
+				if (panel) panel.hidden = !on;
+			}
+		};
+		tabs.forEach((t) => t.addEventListener("click", () => select(t)));
+
+		const open = (id: string) => {
+			const d = document.getElementById(id) as HTMLDialogElement | null;
+			if (!d) return;
+			d.showModal();
+			document.documentElement.style.overflow = "hidden";
+		};
+		root.querySelectorAll<HTMLButtonElement>("[data-open]").forEach((b) =>
+			b.addEventListener("click", () => {
+				open(b.dataset.open!);
+				history.replaceState(null, "", `#${b.id}`);
+			}),
+		);
+		root.querySelectorAll<HTMLDialogElement>("dialog").forEach((d) => {
+			const close = () => {
+				d.querySelector<HTMLElement>(".sc-dialog__panel")!.style.transform = "translateX(100%)";
+				setTimeout(() => {
+					d.close();
+					d.querySelector<HTMLElement>(".sc-dialog__panel")!.style.transform = "";
+				}, 450);
+			};
+			d.querySelector("[data-close]")?.addEventListener("click", close);
+			d.addEventListener("click", (e) => {
+				if (e.target === d) close();
+			});
+			d.addEventListener("close", () => {
+				document.documentElement.style.overflow = "";
+				history.replaceState(null, "", location.pathname);
+			});
+		});
+
+		// Deep link: /portfolio#bykea opens that company.
+		const hash = decodeURIComponent(location.hash.slice(1));
+		const tile = hash ? root.querySelector<HTMLButtonElement>(`.pf__tile[id="${CSS.escape(hash)}"]`) : null;
+		if (tile) {
+			const panel = tile.closest<HTMLElement>(".pf__panel")!;
+			const tab = tabs.find((t) => t.getAttribute("aria-controls") === panel.id);
+			if (tab) select(tab);
+			setTimeout(() => open(tile.dataset.open!), 300);
+		}
+	}
+</script>
+
+<style>
+	.pf {
+		padding-block: clamp(56px, 7vw, 96px) clamp(96px, 12vw, 160px);
+	}
+
+	.pf__tabs {
+		display: flex;
+		gap: clamp(24px, 4vw, 56px);
+		border-block-end: 1px solid var(--sc-line);
+		margin-block-end: clamp(32px, 4vw, 56px);
+	}
+
+	.pf__tab {
+		position: relative;
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+		padding-block: 0 18px;
+		border: 0;
+		background: none;
+		cursor: pointer;
+		font: inherit;
+		font-size: clamp(28px, 3.4vw, 48px);
+		font-weight: 300;
+		letter-spacing: -0.03em;
+		color: var(--sc-mid-grey);
+		transition: color 0.4s;
+	}
+
+	.pf__tab sup {
+		font-size: 12px;
+		letter-spacing: 0.1em;
+		padding-block-start: 0.5em;
+	}
+
+	.pf__tab::after {
+		content: "";
+		position: absolute;
+		inset-inline: 0;
+		inset-block-end: -1px;
+		height: 2px;
+		background: var(--sc-light-green);
+		transform: scaleX(0);
+		transform-origin: left;
+		transition: transform 0.6s var(--sc-ease);
+	}
+
+	.pf__tab[aria-selected="true"] {
+		color: var(--sc-black);
+	}
+
+	.pf__tab[aria-selected="true"]::after {
+		transform: none;
+	}
+
+	.pf__intro {
+		max-width: 62ch;
+		margin-block-end: clamp(40px, 5vw, 72px);
+	}
+
+	.pf__grid {
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 1px;
+		background: var(--sc-line);
+		border: 1px solid var(--sc-line);
+	}
+
+	.pf__grid li {
+		background: var(--sc-white);
+		animation: pf-in 0.8s var(--sc-ease) both;
+		animation-delay: calc(var(--j) * 45ms);
+	}
+
+	.pf__tile {
+		position: relative;
+		display: grid;
+		grid-template-rows: 1fr auto;
+		width: 100%;
+		aspect-ratio: 1;
+		padding: 0;
+		border: 0;
+		background: var(--sc-white);
+		cursor: pointer;
+		font: inherit;
+		color: inherit;
+		text-align: start;
+		overflow: hidden;
+		isolation: isolate;
+	}
+
+	.pf__tile::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background: var(--sc-dark-green);
+		clip-path: inset(100% 0 0 0);
+		transition: clip-path 0.6s var(--sc-ease);
+	}
+
+	.pf__tile:hover::before,
+	.pf__tile:focus-visible::before {
+		clip-path: inset(0 0 0 0);
+	}
+
+	.pf__logo {
+		display: grid;
+		place-items: center;
+		padding: 18%;
+	}
+
+	.pf__logo :global(img) {
+		max-height: 72px;
+		width: auto;
+		object-fit: contain;
+		filter: grayscale(1);
+		transition:
+			filter 0.5s var(--sc-ease),
+			transform 0.6s var(--sc-ease);
+	}
+
+	.pf__tile:hover .pf__logo :global(img),
+	.pf__tile:focus-visible .pf__logo :global(img) {
+		filter: grayscale(1) brightness(0) invert(1);
+		transform: scale(0.94);
+	}
+
+	.pf__name-fallback {
+		font-size: 22px;
+	}
+
+	.pf__caption {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px 18px;
+		font-size: 13px;
+		transform: translateY(100%);
+		opacity: 0;
+		color: var(--sc-white);
+		transition:
+			transform 0.6s var(--sc-ease),
+			opacity 0.4s;
+	}
+
+	.pf__sector {
+		color: var(--sc-mid-grey);
+		text-align: end;
+	}
+
+	.pf__tile:hover .pf__caption,
+	.pf__tile:focus-visible .pf__caption {
+		transform: none;
+		opacity: 1;
+	}
+
+	.pf__plus {
+		position: absolute;
+		inset-block-start: 16px;
+		inset-inline-end: 16px;
+		width: 14px;
+		height: 14px;
+		background:
+			linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
+			linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat;
+		color: var(--sc-mid-grey);
+		transition:
+			transform 0.6s var(--sc-ease),
+			color 0.3s;
+	}
+
+	.pf__tile:hover .pf__plus {
+		transform: rotate(90deg);
+		color: var(--sc-white);
+	}
+
+	.pfd__logo {
+		display: grid;
+		place-items: center;
+		aspect-ratio: 16 / 9;
+		margin-block: 72px 32px;
+		border: 1px solid var(--sc-line);
+		padding: 12%;
+	}
+
+	.pfd__logo :global(img) {
+		max-height: 120px;
+		width: auto;
+		object-fit: contain;
+	}
+
+	.pfd__program {
+		color: var(--sc-light-green);
+		margin-block-end: 12px;
+	}
+
+	.pfd__title {
+		margin-block-end: 32px;
+	}
+
+	.pfd__body {
+		margin-block: 32px;
+	}
+
+	.pfd__gallery {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px;
+		margin-block-start: 40px;
+	}
+
+	.pfd__gallery :global(img) {
+		width: 100%;
+		aspect-ratio: 4 / 3;
+		object-fit: cover;
+	}
+
+	@keyframes pf-in {
+		from {
+			opacity: 0;
+			transform: translateY(16px);
+		}
+	}
+
+	@media (max-width: 900px) {
+		.pf__grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.pf__caption {
+			transform: none;
+			opacity: 1;
+			color: inherit;
+		}
+	}
+</style>

@@ -1,0 +1,416 @@
+/*
+  sarmayacar.css -- shared design system for the Sarmayacar blocks.
+
+  Built on the brand tokens in theme.css (var(--sc-*)); never write raw
+  colors here. Every section block sets a tone with one of the
+  .tone-* classes so the header can adapt to what is under it.
+*/
+
+:root {
+	color-scheme: light;
+	--sc-gutter: clamp(20px, 4vw, 64px);
+	--sc-max: 1440px;
+	--sc-line: rgb(0 0 0 / 0.08);
+	--sc-line-on-dark: rgb(255 255 255 / 0.08);
+	--sc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--sc-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--sc-header-h: 76px;
+
+	/* Institutional: square corners everywhere */
+	--radius-sm: 0px;
+	--radius: 0px;
+	--radius-lg: 0px;
+	--radius-xl: 0px;
+	--radius-media: 0px;
+	--radius-sheet: 0px;
+}
+
+html {
+	background: var(--sc-white);
+}
+
+body {
+	background: var(--sc-white);
+	color: var(--sc-black);
+	font-weight: 400;
+	text-rendering: optimizeLegibility;
+}
+
+::selection {
+	background: var(--sc-light-green);
+	color: var(--sc-white);
+}
+
+/* ---- Layout -------------------------------------------------------------- */
+
+.sc-container {
+	width: min(100% - var(--sc-gutter) * 2, var(--sc-max));
+	margin-inline: auto;
+}
+
+.sc-section {
+	position: relative;
+	padding-block: clamp(96px, 12vw, 176px);
+}
+
+.sc-section--tight {
+	padding-block: clamp(64px, 8vw, 112px);
+}
+
+/* 12-column grid helper */
+.sc-grid {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	column-gap: clamp(16px, 2vw, 32px);
+}
+
+/* ---- Tones --------------------------------------------------------------- */
+
+.tone-light {
+	background: var(--sc-white);
+	color: var(--sc-black);
+	--sc-rule: var(--sc-line);
+	--sc-muted: var(--sc-grey);
+}
+
+.tone-dark {
+	background: var(--sc-dark-green);
+	color: var(--sc-white);
+	--sc-rule: var(--sc-line-on-dark);
+	--sc-muted: var(--sc-mid-grey);
+}
+
+.tone-black {
+	background: var(--sc-black);
+	color: var(--sc-white);
+	--sc-rule: var(--sc-line-on-dark);
+	--sc-muted: var(--sc-grey);
+}
+
+/* Faint vertical column lines behind a section (Elaia / Brikken style) */
+.sc-columns {
+	isolation: isolate;
+}
+
+.sc-columns::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	width: min(100% - var(--sc-gutter) * 2, var(--sc-max));
+	margin-inline: auto;
+	pointer-events: none;
+	background-image: linear-gradient(to right, var(--sc-rule) 1px, transparent 1px);
+	background-size: calc(100% / 4) 100%;
+	border-inline-end: 1px solid var(--sc-rule);
+}
+
+@media (max-width: 720px) {
+	.sc-columns::before {
+		background-size: 50% 100%;
+	}
+}
+
+/* ---- Type ---------------------------------------------------------------- */
+
+.sc-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.2;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+}
+
+.sc-label--rule::before {
+	content: "";
+	width: 28px;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.6;
+}
+
+.sc-display {
+	font-weight: 300;
+	font-size: clamp(48px, 8.2vw, 136px);
+	line-height: 0.98;
+	letter-spacing: -0.04em;
+	text-wrap: balance;
+}
+
+.sc-h2 {
+	font-weight: 300;
+	font-size: clamp(36px, 5vw, 76px);
+	line-height: 1.02;
+	letter-spacing: -0.03em;
+	text-wrap: balance;
+}
+
+.sc-h3 {
+	font-weight: 400;
+	font-size: clamp(22px, 2vw, 30px);
+	line-height: 1.2;
+	letter-spacing: -0.015em;
+}
+
+.sc-lead {
+	font-size: clamp(18px, 1.5vw, 22px);
+	line-height: 1.5;
+	font-weight: 300;
+	max-width: 46ch;
+}
+
+.sc-body {
+	font-size: 16px;
+	line-height: 1.7;
+	color: inherit;
+}
+
+.sc-muted {
+	color: var(--sc-muted);
+}
+
+/* ---- Controls ------------------------------------------------------------ */
+
+.sc-btn {
+	--btn-bg: var(--sc-light-green);
+	--btn-fg: var(--sc-white);
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 18px;
+	padding: 18px 26px;
+	overflow: hidden;
+	background: var(--btn-bg);
+	color: var(--btn-fg);
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	transition: color 0.5s var(--sc-ease);
+	isolation: isolate;
+}
+
+.sc-btn::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background: var(--sc-dark-green);
+	transform: scaleX(0);
+	transform-origin: right;
+	transition: transform 0.6s var(--sc-ease);
+}
+
+.tone-dark .sc-btn::before,
+.tone-black .sc-btn::before {
+	background: var(--sc-white);
+}
+
+.tone-dark .sc-btn:hover,
+.tone-black .sc-btn:hover {
+	color: var(--sc-dark-green);
+}
+
+.sc-btn:hover::before {
+	transform: scaleX(1);
+	transform-origin: left;
+}
+
+.sc-btn__arrow {
+	width: 18px;
+	height: 1px;
+	background: currentColor;
+	position: relative;
+	transition: width 0.5s var(--sc-ease);
+}
+
+.sc-btn__arrow::after {
+	content: "";
+	position: absolute;
+	inset-inline-end: 0;
+	inset-block-start: -3px;
+	width: 7px;
+	height: 7px;
+	border-block-start: 1px solid currentColor;
+	border-inline-end: 1px solid currentColor;
+	transform: rotate(45deg);
+}
+
+.sc-btn:hover .sc-btn__arrow {
+	width: 30px;
+}
+
+.sc-btn--ghost {
+	--btn-bg: transparent;
+	--btn-fg: currentColor;
+	box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.sc-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 14px;
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat;
+	padding-block-end: 6px;
+	transition: background-size 0.6s var(--sc-ease);
+}
+
+.sc-link:hover {
+	background-size: 0% 1px;
+	background-position: 100% 100%;
+}
+
+/* ---- Motion -------------------------------------------------------------- */
+
+[data-reveal] {
+	opacity: 0;
+	transform: translateY(28px);
+	transition:
+		opacity 1.1s var(--sc-ease),
+		transform 1.1s var(--sc-ease);
+	transition-delay: calc(var(--reveal-i, 0) * 90ms);
+}
+
+[data-reveal].is-in {
+	opacity: 1;
+	transform: none;
+}
+
+/* Line-by-line masked headline reveal: wrap lines in .sc-line > span */
+.sc-line {
+	display: block;
+	overflow: hidden;
+	padding-block-end: 0.08em;
+	margin-block-end: -0.08em;
+}
+
+.sc-line > span {
+	display: block;
+	transform: translateY(105%);
+	transition: transform 1.3s var(--sc-ease);
+	transition-delay: calc(var(--line-i, 0) * 110ms + var(--line-delay, 0ms));
+}
+
+.is-in .sc-line > span,
+.sc-line.is-in > span {
+	transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-reveal],
+	.sc-line > span {
+		opacity: 1 !important;
+		transform: none !important;
+		transition: none !important;
+	}
+}
+
+/* Without JS, show everything */
+html:not(.js) [data-reveal] {
+	opacity: 1;
+	transform: none;
+}
+
+html:not(.js) .sc-line > span {
+	transform: none;
+}
+
+/* ---- Dialog (company / team pop-ups) ------------------------------------ */
+
+.sc-dialog {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	max-height: none;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--sc-black);
+	overflow: hidden;
+}
+
+.sc-dialog::backdrop {
+	background: rgb(0 0 0 / 0.55);
+	backdrop-filter: blur(4px);
+}
+
+.sc-dialog__panel {
+	position: absolute;
+	inset-block: 0;
+	inset-inline-end: 0;
+	width: min(720px, 100%);
+	overflow-y: auto;
+	background: var(--sc-white);
+	padding: clamp(28px, 5vw, 64px);
+	transform: translateX(100%);
+	transition: transform 0.7s var(--sc-ease);
+	overscroll-behavior: contain;
+}
+
+.sc-dialog[open] .sc-dialog__panel {
+	transform: none;
+}
+
+.sc-dialog__close {
+	position: sticky;
+	inset-block-start: 0;
+	float: inline-end;
+	display: grid;
+	place-items: center;
+	width: 48px;
+	height: 48px;
+	border: 1px solid var(--sc-line);
+	background: var(--sc-white);
+	cursor: pointer;
+	font-size: 22px;
+	font-weight: 300;
+	color: var(--sc-black);
+	transition: background 0.3s;
+}
+
+.sc-dialog__close:hover {
+	background: var(--sc-grey-25);
+}
+
+.sc-meta {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 24px;
+	padding-block: 24px;
+	border-block: 1px solid var(--sc-line);
+}
+
+.sc-meta dt {
+	font-size: 11px;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--sc-grey);
+	margin-block-end: 6px;
+}
+
+.sc-meta dd {
+	font-size: 15px;
+}
+
+.sc-prose p + p {
+	margin-block-start: 1em;
+}
+
+.sc-prose {
+	font-size: 16px;
+	line-height: 1.75;
+}
+
+.sc-prose a {
+	color: var(--sc-light-green);
+}

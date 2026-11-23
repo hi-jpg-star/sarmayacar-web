@@ -1,0 +1,226 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { formatDate, href } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_press" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("news", {
+	where: { category: "Press" },
+	orderBy: { published_on: "desc" },
+	limit: Math.min(Math.max(value.count ?? 5, 1), 20),
+});
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+const link = href(value.link_url);
+---
+
+<section class="pr tone-light" data-tone="light" id={value.anchor_id || undefined} data-press>
+	<div class="sc-container">
+		<header class="pr__head">
+			<h2 class="sc-h2" data-reveal>{value.headline}</h2>
+			{
+				link && value.link_label && (
+					<a href={link} class="sc-link" data-reveal>
+						{value.link_label}
+					</a>
+				)
+			}
+		</header>
+		<ol class="pr__list">
+			{
+				entries.map((item, i) => {
+					const url = href(item.data.url);
+					return (
+						<li data-reveal style={`--reveal-i:${i}`}>
+							<a href={url} target="_blank" rel="noopener" class="pr__row">
+								<span class="pr__date">{formatDate(item.data.published_on)}</span>
+								<span class="pr__outlet">
+									{item.data.outlet_logo ? (
+										<Image image={item.data.outlet_logo} sizes="120px" alt={item.data.outlet ?? ""} />
+									) : (
+										item.data.outlet
+									)}
+								</span>
+								<span class="pr__title">{item.data.title}</span>
+								<span class="pr__arrow" aria-hidden="true">↗</span>
+								{item.data.thumbnail && (
+									<span class="pr__thumb" aria-hidden="true">
+										<Image image={item.data.thumbnail} sizes="320px" alt="" />
+									</span>
+								)}
+							</a>
+						</li>
+					);
+				})
+			}
+		</ol>
+	</div>
+	<div class="pr__cursor" aria-hidden="true"></div>
+</section>
+
+<script>
+	// A photo of the hovered story follows the cursor.
+	for (const root of document.querySelectorAll<HTMLElement>("[data-press]")) {
+		if (matchMedia("(hover: none)").matches) continue;
+		const cursor = root.querySelector<HTMLElement>(".pr__cursor")!;
+		let x = 0, y = 0, cx = 0, cy = 0, raf = 0;
+		const loop = () => {
+			cx += (x - cx) * 0.16;
+			cy += (y - cy) * 0.16;
+			cursor.style.transform = `translate(${cx}px, ${cy}px)`;
+			raf = requestAnimationFrame(loop);
+		};
+		root.addEventListener("mousemove", (e) => {
+			x = e.clientX;
+			y = e.clientY;
+		});
+		for (const row of root.querySelectorAll<HTMLElement>(".pr__row")) {
+			row.addEventListener("mouseenter", () => {
+				const thumb = row.querySelector(".pr__thumb");
+				cursor.innerHTML = thumb ? thumb.innerHTML : "";
+				cursor.classList.toggle("is-on", !!thumb);
+				if (!raf) loop();
+			});
+			row.addEventListener("mouseleave", () => cursor.classList.remove("is-on"));
+		}
+	}
+</script>
+
+<style>
+	.pr {
+		padding-block: clamp(96px, 12vw, 160px);
+	}
+
+	.pr__head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 24px;
+		margin-block-end: clamp(40px, 5vw, 72px);
+	}
+
+	.pr__list {
+		list-style: none;
+		border-block-end: 1px solid var(--sc-line);
+	}
+
+	.pr__row {
+		position: relative;
+		display: grid;
+		grid-template-columns: 140px 140px minmax(0, 1fr) 40px;
+		align-items: center;
+		gap: 24px;
+		padding-block: 26px;
+		border-block-start: 1px solid var(--sc-line);
+		isolation: isolate;
+	}
+
+	.pr__row::before {
+		content: "";
+		position: absolute;
+		inset: 0 calc(var(--sc-gutter) * -0.5);
+		z-index: -1;
+		background: var(--sc-grey-25);
+		transform: scaleY(0);
+		transform-origin: bottom;
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.pr__row:hover::before {
+		transform: scaleY(1);
+	}
+
+	.pr__date {
+		font-size: 13px;
+		color: var(--sc-grey);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.pr__outlet :global(img) {
+		max-height: 28px;
+		max-width: 110px;
+		width: auto;
+		object-fit: contain;
+		filter: grayscale(1);
+	}
+
+	.pr__title {
+		font-size: clamp(18px, 1.7vw, 26px);
+		font-weight: 300;
+		letter-spacing: -0.01em;
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.pr__row:hover .pr__title {
+		transform: translateX(10px);
+	}
+
+	.pr__arrow {
+		justify-self: end;
+		font-size: 22px;
+		color: var(--sc-light-green);
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.pr__row:hover .pr__arrow {
+		transform: translate(4px, -4px);
+	}
+
+	.pr__thumb {
+		display: none;
+	}
+
+	.pr__cursor {
+		position: fixed;
+		inset-block-start: 0;
+		inset-inline-start: 0;
+		z-index: 30;
+		width: 260px;
+		margin: -90px 0 0 30px;
+		pointer-events: none;
+		opacity: 0;
+		scale: 0.85;
+		transition:
+			opacity 0.35s var(--sc-ease),
+			scale 0.5s var(--sc-ease);
+	}
+
+	.pr__cursor.is-on {
+		opacity: 1;
+		scale: 1;
+	}
+
+	.pr__cursor :global(img) {
+		width: 100%;
+		aspect-ratio: 4 / 3;
+		object-fit: cover;
+	}
+
+	@media (max-width: 760px) {
+		.pr__row {
+			grid-template-columns: 1fr auto;
+			gap: 8px 16px;
+		}
+
+		.pr__date {
+			grid-row: 1;
+		}
+
+		.pr__outlet {
+			grid-row: 1;
+			justify-self: end;
+		}
+
+		.pr__title {
+			grid-column: 1 / -1;
+		}
+
+		.pr__arrow {
+			display: none;
+		}
+	}
+</style>

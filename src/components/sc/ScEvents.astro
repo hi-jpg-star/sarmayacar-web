@@ -1,0 +1,226 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { href, monthYear } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_events" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("events", {
+	orderBy: { event_date: "desc" },
+	limit: Math.min(Math.max(value.count ?? 7, 1), 24),
+});
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+const link = href(value.link_url);
+---
+
+<section class="ev tone-black" data-tone="dark" id={value.anchor_id || undefined} data-events style={`--n:${entries.length}`}>
+	<div class="ev__sticky">
+		<header class="ev__head sc-container">
+			<h2 class="sc-h2">{value.headline}</h2>
+			<div class="ev__progress" aria-hidden="true"><span></span></div>
+			{
+				link && value.link_label && (
+					<a href={link} class="sc-link">
+						{value.link_label}
+					</a>
+				)
+			}
+		</header>
+		<ol class="ev__track">
+			{
+				entries.map((ev, i) => {
+					const d = monthYear(ev.data.event_date);
+					return (
+						<li class="ev__card">
+							<figure>
+								<div class="ev__img">
+									{ev.data.cover && <Image image={ev.data.cover} sizes="(max-width: 760px) 80vw, 34vw" alt="" />}
+								</div>
+								<figcaption>
+									<span class="ev__num sc-label">{String(i + 1).padStart(2, "0")}</span>
+									<span class="ev__title">{ev.data.title}</span>
+									{d && (
+										<span class="ev__date">
+											{d.month} {d.year}
+										</span>
+									)}
+								</figcaption>
+							</figure>
+						</li>
+					);
+				})
+			}
+		</ol>
+	</div>
+</section>
+
+<script>
+	// Vertical scroll drives the strip sideways while the section is pinned.
+	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+	for (const root of document.querySelectorAll<HTMLElement>("[data-events]")) {
+		const track = root.querySelector<HTMLElement>(".ev__track")!;
+		const bar = root.querySelector<HTMLElement>(".ev__progress span");
+		const wide = matchMedia("(min-width: 761px)");
+		const size = () => {
+			if (!wide.matches || reduce) {
+				root.style.height = "";
+				track.style.transform = "";
+				return;
+			}
+			const extra = Math.max(0, track.scrollWidth - innerWidth);
+			root.style.height = `${innerHeight + extra}px`;
+			root.dataset.extra = String(extra);
+		};
+		const tick = () => {
+			if (!wide.matches || reduce) return;
+			const extra = Number(root.dataset.extra || 0);
+			const r = root.getBoundingClientRect();
+			const p = Math.min(1, Math.max(0, -r.top / Math.max(1, extra)));
+			track.style.transform = `translate3d(${-p * extra}px,0,0)`;
+			if (bar) bar.style.transform = `scaleX(${p})`;
+		};
+		let raf = 0;
+		addEventListener("scroll", () => {
+			cancelAnimationFrame(raf);
+			raf = requestAnimationFrame(tick);
+		}, { passive: true });
+		addEventListener("resize", () => {
+			size();
+			tick();
+		});
+		addEventListener("load", () => {
+			size();
+			tick();
+		});
+		size();
+		tick();
+	}
+</script>
+
+<style>
+	.ev {
+		position: relative;
+	}
+
+	.ev__sticky {
+		position: sticky;
+		inset-block-start: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		min-height: 100svh;
+		padding-block: calc(var(--sc-header-h) + 24px) 48px;
+		overflow: hidden;
+	}
+
+	.ev__head {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 32px;
+		margin-block-end: clamp(32px, 4vw, 56px);
+	}
+
+	.ev__progress {
+		height: 1px;
+		background: var(--sc-line-on-dark);
+	}
+
+	.ev__progress span {
+		display: block;
+		height: 100%;
+		background: var(--sc-light-green);
+		transform: scaleX(0);
+		transform-origin: left;
+	}
+
+	.ev__track {
+		display: flex;
+		gap: clamp(16px, 2vw, 28px);
+		width: max-content;
+		padding-inline: max(var(--sc-gutter), (100vw - var(--sc-max)) / 2);
+		list-style: none;
+		will-change: transform;
+	}
+
+	.ev__card {
+		width: clamp(280px, 30vw, 460px);
+	}
+
+	.ev__img {
+		position: relative;
+		aspect-ratio: 4 / 5;
+		overflow: hidden;
+		background: var(--sc-dark-green);
+	}
+
+	.ev__img :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		filter: grayscale(0.85) contrast(1.05);
+		transition:
+			filter 0.6s var(--sc-ease),
+			transform 1.2s var(--sc-ease);
+	}
+
+	.ev__card:hover :global(img) {
+		filter: none;
+		transform: scale(1.05);
+	}
+
+	.ev__card figcaption {
+		display: grid;
+		grid-template-columns: auto 1fr auto;
+		gap: 16px;
+		align-items: baseline;
+		padding-block-start: 16px;
+		border-block-start: 1px solid var(--sc-line-on-dark);
+		margin-block-start: 16px;
+	}
+
+	.ev__num {
+		color: var(--sc-light-green-75);
+	}
+
+	.ev__title {
+		font-size: 18px;
+	}
+
+	.ev__date {
+		font-size: 13px;
+		color: var(--sc-grey);
+	}
+
+	@media (max-width: 760px) {
+		.ev__sticky {
+			position: static;
+			min-height: 0;
+			padding-block: 96px;
+		}
+
+		.ev__head {
+			grid-template-columns: 1fr auto;
+		}
+
+		.ev__progress {
+			display: none;
+		}
+
+		.ev__track {
+			width: auto;
+			overflow-x: auto;
+			scroll-snap-type: x mandatory;
+		}
+
+		.ev__card {
+			flex: 0 0 78vw;
+			scroll-snap-align: start;
+		}
+	}
+</style>

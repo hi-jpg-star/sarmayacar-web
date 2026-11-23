@@ -1,0 +1,331 @@
+---
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import insignia from "../../assets/brand/insignia.svg?url";
+import { fileUrl, href, isExternal, words } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_hero" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value, index } = Astro.props;
+const { headline, eyebrow, subheadline, cta_label, cta_url, video, image, anchor_id } = value;
+const videoSrc = fileUrl(video as never, Astro.locals as never);
+const cta = cta_label ? href(cta_url) : undefined;
+// The first block of the home page gets the intro curtain and full-screen treatment.
+const isFeature = index === 0 && !!videoSrc;
+const w = words(headline);
+---
+
+{
+	isFeature && (
+		<div class="intro tone-dark" aria-hidden="true">
+			<div class="intro__lines">
+				{[0, 1, 2, 3].map((i) => (
+					<i style={`--i:${i}`} />
+				))}
+			</div>
+			<img src={insignia} alt="" class="intro__mark" width="56" height="56" />
+			<p class="intro__word sc-label">Adding value beyond capital</p>
+		</div>
+	)
+}
+
+<section
+	class:list={["hero tone-dark sc-columns", { "hero--feature": isFeature }]}
+	data-tone="dark"
+	id={anchor_id || undefined}
+>
+	<div class="hero__head sc-container" data-reveal-group>
+		{eyebrow && <p class="sc-label sc-label--rule hero__eyebrow" data-reveal>{eyebrow}</p>}
+		<h1 class="sc-display hero__title" aria-label={headline}>
+			{
+				w.map((word, i) => (
+					<span class="sc-line hero__word" style={`--line-i:${i}; --line-delay:${isFeature ? 1500 : 150}ms`} aria-hidden="true">
+						<span>{word}</span>
+					</span>
+				))
+			}
+		</h1>
+		{
+			(subheadline || cta) && (
+				<div class="hero__aside" data-reveal style="--reveal-i:3">
+					{subheadline && <p class="sc-lead hero__sub">{subheadline}</p>}
+					{cta && (
+						<a href={cta} class="sc-btn" target={isExternal(cta) ? "_blank" : undefined} rel="noopener">
+							{cta_label}
+							<span class="sc-btn__arrow" />
+						</a>
+					)}
+				</div>
+			)
+		}
+	</div>
+
+	{
+		(videoSrc || image) && (
+			<div class="hero__media" data-hero-media>
+				<div class="hero__frame">
+					{videoSrc ? (
+						<video src={videoSrc} autoplay muted loop playsinline preload="metadata" aria-hidden="true" />
+					) : (
+						image && <Image image={image} sizes="100vw" loading={index === 0 ? "eager" : "lazy"} />
+					)}
+				</div>
+			</div>
+		)
+	}
+
+	{isFeature && <p class="hero__scroll sc-label" aria-hidden="true">Scroll<span /></p>}
+</section>
+
+<script>
+	// Intro curtain: once per browser session.
+	const intro = document.querySelector<HTMLElement>(".intro");
+	if (intro) {
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		let seen = false;
+		try {
+			seen = sessionStorage.getItem("sc-intro") === "1";
+			sessionStorage.setItem("sc-intro", "1");
+		} catch {}
+		if (seen || reduce) {
+			intro.remove();
+			document.documentElement.style.setProperty("--intro-skip", "1");
+			document.querySelectorAll<HTMLElement>(".hero--feature .sc-line > span").forEach((el) => {
+				el.style.transitionDelay = `calc(var(--line-i) * 90ms)`;
+			});
+		} else {
+			document.documentElement.classList.add("intro-running");
+			setTimeout(() => intro.classList.add("is-done"), 1250);
+			setTimeout(() => {
+				intro.remove();
+				document.documentElement.classList.remove("intro-running");
+			}, 2300);
+		}
+	}
+
+	// Headline words rise in on load.
+	requestAnimationFrame(() => {
+		document.querySelectorAll(".hero__title").forEach((t) => t.classList.add("is-in"));
+	});
+
+	// Media frame widens to full bleed as it scrolls up.
+	const frames = document.querySelectorAll<HTMLElement>("[data-hero-media]");
+	if (frames.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		const tick = () => {
+			const vh = innerHeight;
+			for (const el of frames) {
+				const r = el.getBoundingClientRect();
+				const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.9)));
+				el.style.setProperty("--p", p.toFixed(3));
+			}
+		};
+		let raf = 0;
+		addEventListener("scroll", () => {
+			cancelAnimationFrame(raf);
+			raf = requestAnimationFrame(tick);
+		}, { passive: true });
+		addEventListener("resize", tick);
+		tick();
+	}
+</script>
+
+<style>
+	/* ---- Intro curtain ---- */
+	.intro {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: grid;
+		place-items: center;
+		align-content: center;
+		gap: 28px;
+		transition: clip-path 1s var(--sc-ease-in-out);
+		clip-path: inset(0 0 0 0);
+	}
+
+	.intro.is-done {
+		clip-path: inset(0 0 100% 0);
+	}
+
+	.intro__lines {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		width: min(100% - var(--sc-gutter) * 2, var(--sc-max));
+		margin-inline: auto;
+	}
+
+	.intro__lines i {
+		border-inline-start: 1px solid var(--sc-line-on-dark);
+		transform: scaleY(0);
+		transform-origin: top;
+		animation: intro-line 1s var(--sc-ease) forwards;
+		animation-delay: calc(var(--i) * 90ms);
+	}
+
+	.intro__mark {
+		width: 56px;
+		height: 56px;
+		opacity: 0;
+		animation: intro-fade 0.9s var(--sc-ease) 0.25s forwards;
+	}
+
+	.intro__word {
+		color: var(--sc-mid-grey);
+		opacity: 0;
+		animation: intro-fade 0.9s var(--sc-ease) 0.45s forwards;
+	}
+
+	@keyframes intro-line {
+		to {
+			transform: none;
+		}
+	}
+
+	@keyframes intro-fade {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	/* ---- Hero ---- */
+	.hero {
+		position: relative;
+		padding-block: calc(var(--sc-header-h) + clamp(72px, 10vw, 150px)) clamp(64px, 8vw, 120px);
+		overflow: hidden;
+	}
+
+	.hero--feature {
+		padding-block-end: 0;
+	}
+
+	.hero__head {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: clamp(28px, 4vw, 48px);
+	}
+
+	.hero__title {
+		max-width: 14ch;
+	}
+
+	.hero--feature .hero__title {
+		font-size: clamp(52px, 9.6vw, 168px);
+		max-width: 12ch;
+	}
+
+	.hero__word {
+		display: inline-block;
+		margin-inline-end: 0.22em;
+	}
+
+	.hero__aside {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 32px;
+		padding-block-start: clamp(16px, 3vw, 40px);
+		border-block-start: 1px solid var(--sc-line-on-dark);
+	}
+
+	.hero__sub {
+		color: var(--sc-mid-grey);
+	}
+
+	.hero--feature .hero__aside {
+		transition-delay: 1.9s;
+	}
+
+	:root[style*="--intro-skip"] .hero--feature .hero__aside {
+		transition-delay: 0.4s;
+	}
+
+	.hero__media {
+		--p: 0;
+		margin-block-start: clamp(56px, 7vw, 104px);
+	}
+
+	.hero--feature .hero__media {
+		margin-block-start: clamp(64px, 8vw, 120px);
+	}
+
+	.hero__frame {
+		position: relative;
+		aspect-ratio: 16 / 8;
+		overflow: hidden;
+		margin-inline: auto;
+		width: calc(100% - (1 - var(--p)) * (var(--sc-gutter) * 2 + max(0px, (100vw - var(--sc-max)))));
+		max-height: 92svh;
+	}
+
+	.hero__frame video,
+	.hero__frame :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transform: scale(calc(1.12 - var(--p) * 0.12));
+	}
+
+	.hero__scroll {
+		position: absolute;
+		inset-inline-end: var(--sc-gutter);
+		inset-block-start: calc(var(--sc-header-h) + 24px);
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		color: var(--sc-mid-grey);
+		writing-mode: vertical-rl;
+	}
+
+	.hero__scroll span {
+		position: relative;
+		width: 1px;
+		height: 56px;
+		overflow: hidden;
+		background: var(--sc-line-on-dark);
+	}
+
+	.hero__scroll span::after {
+		content: "";
+		position: absolute;
+		inset-inline: 0;
+		height: 40%;
+		background: var(--sc-light-green);
+		animation: scroll-cue 2.2s var(--sc-ease-in-out) infinite;
+	}
+
+	@keyframes scroll-cue {
+		from {
+			transform: translateY(-100%);
+		}
+		to {
+			transform: translateY(250%);
+		}
+	}
+
+	@media (max-width: 720px) {
+		.hero__frame {
+			aspect-ratio: 4 / 5;
+		}
+
+		.hero__scroll {
+			display: none;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.intro {
+			display: none;
+		}
+	}
+</style>
