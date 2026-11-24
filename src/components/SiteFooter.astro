@@ -117,8 +117,7 @@ const cta = items.find(isButton);
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
-		gap: clamp(48px, 8vh, 96px);
-		width: 100%;
+		gap: clamp(32px, 6vh, 80px);
 		padding-block: calc(var(--sc-header-h) + clamp(24px, 4vh, 56px)) clamp(20px, 3vh, 32px);
 	}
 
@@ -130,7 +129,7 @@ const cta = items.find(isButton);
 
 	.sf__line {
 		max-width: 14ch;
-		font-size: clamp(44px, 7vw, 120px);
+		font-size: clamp(40px, min(7vw, 10vh), 120px);
 		font-weight: 300;
 		line-height: 1;
 		letter-spacing: -0.04em;
@@ -201,6 +200,23 @@ const cta = items.find(isButton);
 		}
 	}
 
-	/* On short screens the footer is taller than the window; it still slides
-	   out from under the page, bottom first. */
+	/* When the footer is taller than the window (phones, short screens), its
+	   top could never be uncovered, so it scrolls in normally instead. */
+	.sf.is-tall {
+		position: relative;
+		z-index: auto;
+	}
 </style>
+
+<script>
+	const footer = document.querySelector<HTMLElement>(".sf");
+	if (footer) {
+		const fit = () => {
+			footer.classList.remove("is-tall");
+			footer.classList.toggle("is-tall", footer.offsetHeight > innerHeight + 1);
+		};
+		fit();
+		addEventListener("resize", fit);
+		addEventListener("load", fit);
+	}
+</script>
