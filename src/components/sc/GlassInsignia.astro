@@ -216,7 +216,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 					// is behind the glass reads softer than the page around it.
 					// Dispersion: red, green and blue bend by slightly different
 					// amounts, a faint prism split only towards the edges.
-					float k = 0.012 + 0.09 * fres;
+					float k = 0.008 + 0.05 * fres;
 					vec2 px = 3.5 / uRes;
 					vec3 col = vec3(0.0);
 					for (int i = -1; i <= 1; i++) {
@@ -241,7 +241,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 
 					// a soft prism fringe right on the rim
 					vec3 prism = 0.5 + 0.5 * cos(6.2831 * (fres * 1.3 + vec3(0.0, 0.33, 0.67)));
-					col += prism * smoothstep(0.45, 0.95, fres) * 0.06;
+					col += prism * smoothstep(0.5, 0.95, fres) * 0.025;
 
 					gl_FragColor = vec4(col, 1.0);
 				}`,
