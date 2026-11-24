@@ -208,8 +208,8 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 
 					// Refraction: the body magnifies what is behind it (a thick lens)
 					// and the bevels bend it sharply along their normals.
-					vec2 lens = (uCentre - uv) * 0.2;
-					vec2 bend = -n.xy * (0.05 + 0.12 * fres);
+					vec2 lens = (uCentre - uv) * 0.05;
+					vec2 bend = -n.xy * (0.03 + 0.1 * fres);
 					vec2 off = lens + bend;
 
 					// Dispersion: red, green and blue bend by different amounts,
@@ -221,14 +221,14 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 					col.b = texture2D(uBg, uv + off * (1.0 + k)).b;
 
 					// a faint green body tint and a little extra depth
-					col = mix(col, col * (0.85 + uTint * 0.5), 0.25);
+					col *= mix(vec3(1.0), 0.9 + uTint * 0.2, 0.6); // the faintest green cast
 
 					// studio reflections on top
 					vec3 r = reflect(-vV, n);
 					float top = smoothstep(0.45, 0.95, r.y);
 					float side = smoothstep(0.6, 1.0, r.x) * 0.5;
 					float spec = pow(max(dot(r, normalize(vec3(-0.4, 0.7, 0.6))), 0.0), 60.0);
-					col += uWhite * (fres * 0.35 + top * 0.18 + side * 0.12 + spec * 0.9);
+					col += uWhite * (fres * 0.3 + top * 0.12 + side * 0.08 + spec * 0.9);
 
 					// a soft prism fringe right on the rim
 					vec3 prism = 0.5 + 0.5 * cos(6.2831 * (fres * 1.3 + vec3(0.0, 0.33, 0.67)));
