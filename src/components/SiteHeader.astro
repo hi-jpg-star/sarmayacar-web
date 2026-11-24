@@ -131,6 +131,9 @@ const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 				const r = el.getBoundingClientRect();
 				if (r.top <= y && r.bottom > y) tone = el.dataset.tone || "light";
 			}
+			// past the end of the page: the footer (dark) is showing underneath
+			const main = document.getElementById("main");
+			if (main && main.getBoundingClientRect().bottom <= y) tone = "dark";
 			header.dataset.tone = tone;
 			header.classList.toggle("is-scrolled", window.scrollY > 40);
 		};

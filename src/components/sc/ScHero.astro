@@ -3,6 +3,7 @@ import { Image, type BlockComponentProps } from "emdash/ui";
 import type { PageContentBlock } from "../../../emdash-env";
 import { fileUrl, href, isExternal, words } from "../../utils/sc";
 import GlassInsignia from "./GlassInsignia.astro";
+import insignia from "../../assets/brand/insignia.svg?url";
 
 type Block = Extract<PageContentBlock, { _type: "sc_hero" }>;
 type Props = BlockComponentProps<Block>;
@@ -17,6 +18,15 @@ const w = words(headline);
 ---
 
 {isHome && <GlassInsignia />}
+
+{
+	isHome && (
+		<div class="intro tone-dark" aria-hidden="true">
+			<img src={insignia} alt="" class="intro__mark" width="56" height="56" />
+			<p class="intro__word sc-label">Adding value beyond capital</p>
+		</div>
+	)
+}
 
 <section
 	class:list={["hero tone-dark", { "hero--home": isHome }]}
@@ -68,6 +78,30 @@ const w = words(headline);
 </section>
 
 <script>
+	// Loader on the home page: once per browser session, skipped with reduced motion.
+	const intro = document.querySelector<HTMLElement>(".intro");
+	if (intro) {
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		let seen = false;
+		try {
+			seen = sessionStorage.getItem("sc-intro") === "1";
+			sessionStorage.setItem("sc-intro", "1");
+		} catch {}
+		if (seen || reduce) {
+			intro.remove();
+		} else {
+			document.documentElement.classList.add("intro-running");
+			// headline words rise as the curtain lifts
+			document.querySelectorAll<HTMLElement>(".hero--home .sc-line").forEach((el) => {
+				el.style.setProperty("--line-delay", "1500ms");
+			});
+			setTimeout(() => intro.classList.add("is-done"), 1250);
+			setTimeout(() => {
+				intro.remove();
+				document.documentElement.classList.remove("intro-running");
+			}, 2300);
+		}
+	}
 	// Headline words rise in on load.
 	requestAnimationFrame(() => {
 		document.querySelectorAll(".hero__title").forEach((t) => t.classList.add("is-in"));
@@ -92,6 +126,53 @@ const w = words(headline);
 </script>
 
 <style>
+	/* ---- Loader (home) ---- */
+	.intro {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: grid;
+		place-items: center;
+		align-content: center;
+		gap: 28px;
+		clip-path: inset(0 0 0 0);
+		transition: clip-path 1s var(--sc-ease-in-out);
+	}
+
+	.intro.is-done {
+		clip-path: inset(0 0 100% 0);
+	}
+
+	.intro__mark {
+		width: 56px;
+		height: 56px;
+		opacity: 0;
+		animation: intro-fade 0.9s var(--sc-ease) 0.15s forwards;
+	}
+
+	.intro__word {
+		color: var(--sc-mid-grey);
+		opacity: 0;
+		animation: intro-fade 0.9s var(--sc-ease) 0.35s forwards;
+	}
+
+	@keyframes intro-fade {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.intro {
+			display: none;
+		}
+	}
+
 	.hero {
 		position: relative;
 		padding-block: calc(var(--sc-header-h) + clamp(72px, 10vw, 150px)) clamp(64px, 8vw, 120px);
@@ -144,7 +225,7 @@ const w = words(headline);
 
 	.hero__word {
 		display: inline-block;
-		margin-inline-end: 0.22em;
+		margin-inline-end: 0.14em; /* + the mask padding = the usual word space */
 	}
 
 	.hero__aside {
@@ -187,8 +268,9 @@ const w = words(headline);
 
 	.hero__scroll {
 		position: absolute;
-		inset-inline-end: var(--sc-gutter);
-		inset-block-end: clamp(40px, 5vw, 72px);
+		/* physical sides: in vertical writing mode "inline" means top/bottom */
+		right: var(--sc-gutter);
+		bottom: clamp(40px, 5vw, 72px);
 		display: flex;
 		align-items: center;
 		gap: 12px;
