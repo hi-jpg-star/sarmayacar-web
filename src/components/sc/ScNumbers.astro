@@ -67,7 +67,7 @@ const items = value.items ?? [];
 	}
 
 	.nb__label {
-		color: var(--sc-grey);
+		color: var(--sc-muted, var(--sc-grey));
 		margin-block-end: clamp(32px, 4vw, 56px);
 	}
 
@@ -113,7 +113,7 @@ const items = value.items ?? [];
 
 	.nb__note {
 		font-size: 14px;
-		color: var(--sc-grey);
+		color: var(--sc-muted, var(--sc-grey));
 	}
 
 	@media (max-width: 720px) {

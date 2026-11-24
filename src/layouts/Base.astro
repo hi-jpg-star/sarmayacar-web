@@ -67,6 +67,8 @@ const isLoggedIn = !!Astro.locals.user;
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>{fullTitle}</title>
+		<link rel="preload" href="/fonts/Graphik-Regular.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/Graphik-Medium.woff2" as="font" type="font/woff2" crossorigin />
 		<EmDashHead page={pageCtx} />
 		<script is:inline>document.documentElement.classList.add("js");</script>
 	</head>

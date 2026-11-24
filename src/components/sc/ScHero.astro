@@ -37,7 +37,7 @@ const w = words(headline);
 		</h1>
 		{
 			(subheadline || cta) && (
-				<div class="hero__aside" data-reveal style="--reveal-i:3">
+				<div class="hero__aside">
 					{subheadline && <p class="sc-lead hero__sub">{subheadline}</p>}
 					{cta && (
 						<a href={cta} class="sc-btn" target={isExternal(cta) ? "_blank" : undefined} rel="noopener">

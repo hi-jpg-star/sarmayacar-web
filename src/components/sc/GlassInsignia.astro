@@ -20,23 +20,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 </div>
 
 <script>
-	import {
-		Color,
-		ExtrudeGeometry,
-		Group,
-		Mesh,
-		ShaderMaterial,
-		DoubleSide,
-		NormalBlending,
-		PerspectiveCamera,
-		Scene,
-		SRGBColorSpace,
-		WebGLRenderer,
-		Box3,
-		Vector3,
-	} from "three";
-	import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
-
+	import type { Group as GroupT } from "three";
 	const root = document.querySelector<HTMLElement>("[data-glass]");
 	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -49,7 +33,38 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		}
 	}
 
-	if (root && !reduce && webglOk()) {
+	// Software WebGL (no graphics card: some low-end devices, headless browsers)
+	// is far too slow for this scene; those visitors get the still insignia.
+	function hardwareGl() {
+		try {
+			const gl = document.createElement("canvas").getContext("webgl");
+			const info = gl?.getExtension("WEBGL_debug_renderer_info");
+			const name = info ? String(gl!.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+			return !/swiftshader|llvmpipe|software|basic render/i.test(name);
+		} catch {
+			return false;
+		}
+	}
+
+	const start = async () => {
+		if (!root || reduce || !webglOk() || !hardwareGl()) return;
+		const {
+			Color,
+			ExtrudeGeometry,
+			Group,
+			Mesh,
+			ShaderMaterial,
+			DoubleSide,
+			NormalBlending,
+			PerspectiveCamera,
+			Scene,
+			SRGBColorSpace,
+			WebGLRenderer,
+			Box3,
+			Vector3,
+		} = await import("three");
+		const { SVGLoader } = await import("three/examples/jsm/loaders/SVGLoader.js");
+
 		const css = getComputedStyle(document.documentElement);
 		const brand = (name: string) => new Color(css.getPropertyValue(name).trim());
 		const darkGreen = brand("--sc-dark-green");
@@ -116,7 +131,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		});
 
 		const insignia = new Group();
-		const parts: Group[] = [];
+		const parts: GroupT[] = [];
 		for (const path of svg.paths) {
 			const part = new Group();
 			for (const shape of SVGLoader.createShapes(path)) {
@@ -228,7 +243,14 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		};
 		root.classList.add("is-live");
 		requestAnimationFrame(frame);
-	}
+	};
+
+	// Load the 3D library only after the page has finished loading and the
+	// browser is idle, so it never delays the first paint or the headline.
+	const later = () =>
+		"requestIdleCallback" in window ? requestIdleCallback(() => start(), { timeout: 2500 }) : setTimeout(start, 600);
+	if (document.readyState === "complete") later();
+	else addEventListener("load", later, { once: true });
 </script>
 
 <style>

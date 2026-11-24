@@ -13,8 +13,9 @@ const w = words(value.text);
 <section class="mf tone-dark" data-tone="dark" id={value.anchor_id || undefined} data-manifesto data-glass-stage>
 	<div class="mf__inner sc-container">
 		{value.label && <p class="sc-label sc-label--rule mf__label">{value.label}</p>}
-		<p class="mf__text" aria-label={value.text}>
-			{w.map((word, i) => <span class="mf__w" style={`--i:${i}`} aria-hidden="true">{word} </span>)}
+		<p class="mf__text">
+			<span class="sc-sr-only">{value.text}</span>
+			<span aria-hidden="true">{w.map((word, i) => <span class="mf__w" style={`--i:${i}`}>{word} </span>)}</span>
 		</p>
 	</div>
 </section>
@@ -79,7 +80,7 @@ const w = words(value.text);
 	}
 
 	.mf__w {
-		color: rgb(255 255 255 / 0.16);
+		color: rgb(255 255 255 / 0.3);
 		transition: color 0.5s var(--sc-ease);
 	}
 
