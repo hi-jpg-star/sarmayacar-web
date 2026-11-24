@@ -179,7 +179,8 @@ const cta = items.find(isButton);
 
 	.sf__logo img {
 		display: block;
-		width: 100%;
+		/* as wide as the page, but short enough that the footer fits one screen */
+		width: min(100%, 24svh * 4.93);
 		height: auto;
 	}
 
