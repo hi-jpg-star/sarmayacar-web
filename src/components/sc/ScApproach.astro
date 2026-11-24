@@ -16,14 +16,13 @@ const items = value.items ?? [];
 			<h2 class="sc-h2" data-reveal>{value.headline}</h2>
 			{value.intro && <p class="sc-lead ap__intro" data-reveal style="--reveal-i:1">{value.intro}</p>}
 			<ol class="ap__index" aria-hidden="true">
-				{items.map((item, i) => <li data-i={i}>{String(i + 1).padStart(2, "0")} {item.title}</li>)}
+				{items.map((item, i) => <li data-i={i}>{item.title}</li>)}
 			</ol>
 		</header>
 		<ol class="ap__list">
 			{
 				items.map((item, i) => (
 					<li class="ap__item" data-i={i}>
-						<span class="ap__num">{String(i + 1).padStart(2, "0")}</span>
 						<h3 class="ap__title">{item.title}</h3>
 						{item.text && <p class="ap__text">{item.text}</p>}
 					</li>
@@ -109,8 +108,7 @@ const items = value.items ?? [];
 
 	.ap__item {
 		display: grid;
-		grid-template-columns: 72px minmax(0, 1fr);
-		gap: 16px 24px;
+		gap: 16px;
 		padding-block: clamp(48px, 6vw, 88px);
 		border-block-start: 1px solid var(--sc-line);
 		opacity: 0.28;
@@ -123,15 +121,6 @@ const items = value.items ?? [];
 
 	.ap__item.is-active {
 		opacity: 1;
-	}
-
-	.ap__num {
-		grid-row: span 2;
-		font-size: 14px;
-		font-weight: 500;
-		letter-spacing: 0.1em;
-		color: var(--sc-light-green);
-		padding-block-start: 0.9em;
 	}
 
 	.ap__title {
@@ -166,13 +155,7 @@ const items = value.items ?? [];
 		}
 
 		.ap__item {
-			grid-template-columns: 1fr;
 			opacity: 1;
-		}
-
-		.ap__num {
-			grid-row: auto;
-			padding: 0;
 		}
 	}
 

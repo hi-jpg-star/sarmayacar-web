@@ -6,7 +6,6 @@
  * "footer_contact" menu) and the full logo set large across the bottom.
  */
 import logoLight from "../assets/brand/logo-light.svg?url";
-import insignia from "../assets/brand/insignia.svg?url";
 
 interface MenuItem {
 	label: string;
@@ -30,11 +29,10 @@ const links = items.filter((i) => !isButton(i));
 const cta = items.find(isButton);
 ---
 
-<footer class="sf tone-black" data-tone="dark">
+<footer class="sf tone-dark" data-tone="dark">
 	<div class="sf__inner sc-container">
 		<div class="sf__lead">
-			<img class="sf__mark" src={insignia} alt="" width="56" height="56" />
-			<p class="sf__line">Adding value beyond capital.</p>
+			<p class="sf__line">Build with us.</p>
 			{
 				cta && (
 					<a href={cta.url} class="sc-btn sf__cta">
@@ -45,55 +43,54 @@ const cta = items.find(isButton);
 			}
 		</div>
 
-		<div class="sf__cols">
-			<nav aria-label="Footer">
-				<p class="sc-label">Explore</p>
-				<ul>
-					{
-						links.map((item) => (
-							<li>
-								<a href={item.url}>{item.label}</a>
-							</li>
-						))
-					}
-				</ul>
-			</nav>
-			{
-				contact.length > 0 && (
-					<div>
-						<p class="sc-label">Contact</p>
-						<ul>
-							{contact.map((item) => (
+		<div class="sf__bottom">
+			<div class="sf__cols">
+				<a href="/" class="sf__logo" aria-label={`${siteTitle} home`}>
+					<img src={logoLight} alt="" width="1392" height="283" />
+				</a>
+				<nav aria-label="Footer">
+					<p class="sc-label">Explore</p>
+					<ul>
+						{
+							links.map((item) => (
 								<li>
-									<a href={item.url} target={item.url.startsWith("http") ? "_blank" : undefined} rel="noopener">
-										{item.label}
+									<a href={item.url}>{item.label}</a>
+								</li>
+							))
+						}
+					</ul>
+				</nav>
+				{
+					contact.length > 0 && (
+						<div>
+							<p class="sc-label">Contact</p>
+							<ul>
+								{contact.map((item) => (
+									<li>
+										<a href={item.url} target={item.url.startsWith("http") ? "_blank" : undefined} rel="noopener">
+											{item.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</div>
+					)
+				}
+				{
+					linkedin && (
+						<div>
+							<p class="sc-label">Follow</p>
+							<ul>
+								<li>
+									<a href={linkedin} target="_blank" rel="noopener">
+										LinkedIn
 									</a>
 								</li>
-							))}
-						</ul>
-					</div>
-				)
-			}
-			{
-				linkedin && (
-					<div>
-						<p class="sc-label">Follow</p>
-						<ul>
-							<li>
-								<a href={linkedin} target="_blank" rel="noopener">
-									LinkedIn
-								</a>
-							</li>
-						</ul>
-					</div>
-				)
-			}
-		</div>
-
-		<div class="sf__bottom">
-			<a href="/" class="sf__logo" aria-label={`${siteTitle} home`}>
-				<img src={logoLight} alt="" width="1392" height="283" />
-			</a>
+							</ul>
+						</div>
+					)
+				}
+			</div>
 			<div class="sf__legal">
 				<p>&copy; {year} {siteTitle}</p>
 				<a href="#main" class="sf__top-link">Back to top ↑</a>
@@ -121,15 +118,9 @@ const cta = items.find(isButton);
 		padding-block: calc(var(--sc-header-h) + clamp(24px, 4vh, 56px)) clamp(20px, 3vh, 32px);
 	}
 
-	.sf__mark {
-		width: 56px;
-		height: 56px;
-		margin-block-end: clamp(24px, 4vh, 40px);
-	}
-
 	.sf__line {
 		max-width: 14ch;
-		font-size: clamp(40px, min(7vw, 10vh), 120px);
+		font-size: clamp(56px, min(10.5vw, 17vh), 152px);
 		font-weight: 300;
 		line-height: 1;
 		letter-spacing: -0.04em;
@@ -171,16 +162,17 @@ const cta = items.find(isButton);
 		color: var(--sc-white);
 	}
 
-	/* Full logo across the width: the supplied file, scaled evenly (manual 1.2) */
+	/* The supplied logo file, small and scaled evenly (manual 1.2: at least
+	   150px wide on desktop), with clear space around it */
 	.sf__logo {
 		display: block;
-		width: 100%;
+		align-self: start;
+		width: 180px;
 	}
 
 	.sf__logo img {
 		display: block;
-		/* as wide as the page, but short enough that the footer fits one screen */
-		width: min(100%, 24svh * 4.93);
+		width: 100%;
 		height: auto;
 	}
 
@@ -195,9 +187,20 @@ const cta = items.find(isButton);
 		color: var(--sc-grey);
 	}
 
+	.sf__bottom {
+		display: grid;
+		gap: clamp(40px, 6vh, 72px);
+	}
+
 	@media (max-width: 800px) {
 		.sf__cols {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		/* manual 1.2: at least 200px wide on mobile */
+		.sf__logo {
+			grid-column: 1 / -1;
+			width: 200px;
 		}
 	}
 

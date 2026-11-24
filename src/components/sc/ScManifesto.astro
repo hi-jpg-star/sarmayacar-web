@@ -48,27 +48,25 @@ const w = words(value.text);
 </script>
 
 <style>
+	/* Label above the statement; the section is about one screen tall and
+	   the statement sits in its middle */
 	.mf {
-		padding-block: clamp(120px, 16vw, 240px);
+		display: grid;
+		align-items: center;
+		min-height: min(100svh, 760px);
+		padding-block: clamp(120px, 11vw, 160px);
 	}
 
 	:global(body:has(.glass)) .mf {
 		background: transparent;
-		min-height: 140svh;
-		display: grid;
-		align-items: center;
 	}
 
 	.mf__inner {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
-		gap: 40px;
-		align-items: start;
+		gap: clamp(24px, 3vw, 40px);
 	}
 
 	.mf__label {
-		position: sticky;
-		inset-block-start: calc(var(--sc-header-h) + 24px);
 		color: var(--sc-mid-grey);
 	}
 
@@ -92,13 +90,4 @@ const w = words(value.text);
 		color: var(--sc-white);
 	}
 
-	@media (max-width: 800px) {
-		.mf__inner {
-			grid-template-columns: 1fr;
-		}
-
-		.mf__label {
-			position: static;
-		}
-	}
 </style>

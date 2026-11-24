@@ -35,7 +35,11 @@ const w = words(headline);
 	id={anchor_id || undefined}
 >
 	<div class="hero__head sc-container">
-		{eyebrow && <p class="sc-label sc-label--rule hero__eyebrow" data-reveal>{eyebrow}</p>}
+		{!isHome && eyebrow && <p class="sc-label sc-label--rule hero__eyebrow" data-reveal>{eyebrow}</p>}
+		{
+			isHome ? (
+				<h1 class="sc-display hero__title">{headline}</h1>
+			) : (
 		<h1 class="sc-display hero__title" aria-label={headline}>
 			{
 				w.map((word, i) => (
@@ -45,6 +49,8 @@ const w = words(headline);
 				))
 			}
 		</h1>
+			)
+		}
 		{
 			(subheadline || cta) && (
 				<div class="hero__aside">
@@ -91,10 +97,6 @@ const w = words(headline);
 			intro.remove();
 		} else {
 			document.documentElement.classList.add("intro-running");
-			// headline words rise as the curtain lifts
-			document.querySelectorAll<HTMLElement>(".hero--home .sc-line").forEach((el) => {
-				el.style.setProperty("--line-delay", "1500ms");
-			});
 			setTimeout(() => intro.classList.add("is-done"), 1250);
 			setTimeout(() => {
 				intro.remove();
@@ -179,13 +181,14 @@ const w = words(headline);
 		overflow: hidden;
 	}
 
-	/* Home: transparent so the glass scene shows; full screen; logo on top, text at the bottom */
+	/* Home: transparent so the glass scene shows; full screen; one centred,
+	   static statement with the glass floating over it */
 	.hero--home {
 		display: flex;
 		flex-direction: column;
-		justify-content: flex-end;
+		justify-content: center;
 		min-height: 100svh;
-		padding-block: calc(var(--sc-header-h) + 8px) clamp(40px, 5vw, 72px);
+		padding-block: calc(var(--sc-header-h) + 24px) clamp(56px, 7vw, 96px);
 		background: transparent;
 		overflow: visible;
 	}
@@ -201,26 +204,24 @@ const w = words(headline);
 	}
 
 	.hero--home .hero__head {
-		grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-		align-items: end;
-		gap: 24px clamp(32px, 5vw, 96px);
-	}
-
-	.hero--home .hero__eyebrow {
-		grid-column: 1 / -1;
-		color: var(--sc-mid-grey);
+		justify-items: center;
+		text-align: center;
+		gap: clamp(32px, 4vw, 56px);
 	}
 
 	.hero--home .hero__title {
-		font-size: clamp(44px, 6.4vw, 112px);
+		font-size: clamp(52px, 10.5vw, 152px);
+		line-height: 0.98;
 		max-width: 11ch;
+		text-wrap: balance;
 	}
 
 	.hero--home .hero__aside {
 		border: 0;
 		padding: 0;
 		flex-direction: column;
-		align-items: flex-start;
+		align-items: center;
+		max-width: 620px;
 	}
 
 	.hero__word {
