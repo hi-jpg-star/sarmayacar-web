@@ -152,11 +152,23 @@ const link = href(value.link_url);
 			const dx = e.changedTouches[0].clientX - sx;
 			if (Math.abs(dx) > 40) show(idx + (dx < 0 ? 1 : -1));
 		});
+		// Allow vertical mouse wheel over the thumbnail bar to scroll thumbnails sideways
+		thumbs.addEventListener(
+			"wheel",
+			(e) => {
+				if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+					thumbs.scrollLeft += e.deltaY;
+					e.preventDefault();
+				}
+			},
+			{ passive: false },
+		);
 	}
 
-	// Vertical scroll drives the strip sideways while the section is pinned.
+	// Vertical scroll, horizontal trackpad swipe, and mouse drag drive the strip sideways while pinned.
 	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 	for (const root of document.querySelectorAll<HTMLElement>("[data-events]")) {
+		const sticky = root.querySelector<HTMLElement>(".ev__sticky")!;
 		const track = root.querySelector<HTMLElement>(".ev__track")!;
 		const bar = root.querySelector<HTMLElement>(".ev__progress span");
 		const wide = matchMedia("(min-width: 761px)");
@@ -178,6 +190,60 @@ const link = href(value.link_url);
 			track.style.transform = `translate3d(${-p * extra}px,0,0)`;
 			if (bar) bar.style.transform = `scaleX(${p})`;
 		};
+		// Horizontal trackpad / mouse-wheel swipe moves the gallery strip sideways
+		sticky.addEventListener(
+			"wheel",
+			(e) => {
+				if (!wide.matches || reduce) return;
+				if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 1) return;
+				const extra = Number(root.dataset.extra || 0);
+				if (extra <= 0) return;
+				const r = root.getBoundingClientRect();
+				const p = -r.top / extra;
+				const canScroll = (e.deltaX > 0 && p < 1) || (e.deltaX < 0 && p > 0);
+				if (canScroll) {
+					e.preventDefault();
+					window.scrollBy({ top: e.deltaX * 1.15, behavior: "instant" });
+				}
+			},
+			{ passive: false },
+		);
+		// Click-and-drag horizontally on the strip with a mouse
+		let dragging = false;
+		let dragged = false;
+		let lastX = 0;
+		track.addEventListener("pointerdown", (e) => {
+			if (!wide.matches || reduce || e.pointerType !== "mouse" || e.button !== 0) return;
+			dragging = true;
+			dragged = false;
+			lastX = e.clientX;
+			track.classList.add("is-dragging");
+		});
+		addEventListener("pointermove", (e) => {
+			if (!dragging) return;
+			const dx = e.clientX - lastX;
+			lastX = e.clientX;
+			if (Math.abs(dx) > 2) dragged = true;
+			if (dragged) window.scrollBy({ top: -dx * 1.25, behavior: "instant" });
+		});
+		const endDrag = () => {
+			if (!dragging) return;
+			dragging = false;
+			track.classList.remove("is-dragging");
+			if (dragged) setTimeout(() => (dragged = false), 60);
+		};
+		addEventListener("pointerup", endDrag);
+		addEventListener("pointercancel", endDrag);
+		track.addEventListener(
+			"click",
+			(e) => {
+				if (dragged) {
+					e.preventDefault();
+					e.stopPropagation();
+				}
+			},
+			true,
+		);
 		let raf = 0;
 		addEventListener("scroll", () => {
 			cancelAnimationFrame(raf);
@@ -240,6 +306,16 @@ const link = href(value.link_url);
 		padding-inline: max(var(--sc-gutter), (100vw - var(--sc-max)) / 2);
 		list-style: none;
 		will-change: transform;
+		cursor: grab;
+	}
+
+	.ev__track.is-dragging {
+		cursor: grabbing;
+		user-select: none;
+	}
+
+	.ev__track.is-dragging .ev__open {
+		cursor: grabbing;
 	}
 
 	.ev__card {
@@ -423,29 +499,55 @@ const link = href(value.link_url);
 	.gv__thumbs {
 		display: flex;
 		align-items: center;
-		height: 108px;
+		width: 100%;
+		min-height: 104px;
 		box-sizing: border-box;
-		gap: 8px;
-		padding: 20px var(--sc-gutter) 24px;
+		gap: 10px;
+		padding: 16px var(--sc-gutter) 24px;
 		overflow-x: auto;
 		scrollbar-width: none;
 	}
 
-	.gv__thumbs button {
-		flex: 0 0 96px;
-		height: 64px;
+	.gv__thumbs::-webkit-scrollbar {
+		display: none;
+	}
+
+	.gv__thumbs :global(button) {
+		flex: 0 0 clamp(60px, 6.5vw, 76px);
+		min-width: 60px;
+		min-height: 60px;
+		width: clamp(60px, 6.5vw, 76px);
+		height: clamp(60px, 6.5vw, 76px);
+		aspect-ratio: 1 / 1;
 		overflow: hidden;
 		background: var(--sc-dark-green-75);
 		padding: 0;
 		border: 0;
 		cursor: pointer;
-		opacity: 0.4;
+		opacity: 0.42;
+		outline: 1px solid transparent;
 		outline-offset: 2px;
-		transition: opacity 0.3s;
+		transition:
+			opacity 0.3s,
+			outline-color 0.3s;
 	}
 
-	.gv__thumbs button.is-on,
-	.gv__thumbs button:hover {
+	/* Safe-center thumbnails when there are fewer than the viewport width,
+	   while keeping the first thumbnail reachable when scrolling overflows */
+	.gv__thumbs :global(button:first-child) {
+		margin-inline-start: auto;
+	}
+
+	.gv__thumbs :global(button:last-child) {
+		margin-inline-end: auto;
+	}
+
+	.gv__thumbs :global(button.is-on) {
+		opacity: 1;
+		outline-color: var(--sc-light-green);
+	}
+
+	.gv__thumbs :global(button:hover) {
 		opacity: 1;
 	}
 
@@ -454,6 +556,7 @@ const link = href(value.link_url);
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		object-position: center;
 	}
 
 	@media (max-width: 760px) {

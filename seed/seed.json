@@ -2103,17 +2103,17 @@
 							"_key": "hero",
 							"layout": "home",
 							"eyebrow": "Early-stage venture capital, Pakistan",
-							"headline": "We back Pakistan's daring founders.",
-							"subheadline": "Early-stage venture capital from Lahore and Karachi, bringing international investment practice to technology companies built in Pakistan.",
-							"cta_label": "Apply for funding",
-							"cta_url": "/get-funding"
+							"headline": "Backing Daring Founders",
+							"subheadline": "",
+							"cta_label": "",
+							"cta_url": ""
 						},
 						{
 							"_type": "sc_manifesto",
 							"_version": 1,
 							"_key": "manifesto",
 							"label": "What we believe",
-							"text": "Iconic companies will be built in Pakistan. They need more than a cheque. They need international investment practice, applied on the ground by people who know the culture, the history and the market, and who stay. We invest ourselves in people, and our money in their companies."
+							"text": "Pakistan will build enduring global companies. We back the founders defining that future—with conviction, discipline, and permanence."
 						},
 						{
 							"_type": "sc_approach",

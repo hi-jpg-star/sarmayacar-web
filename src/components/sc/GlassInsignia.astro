@@ -58,14 +58,19 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 			Scene,
 			SRGBColorSpace,
 			WebGLRenderer,
+			WebGLRenderTarget,
 			Box3,
 			Vector2,
 			Vector3,
 			CanvasTexture,
 			LinearFilter,
 			FrontSide,
+			BackSide,
+			HalfFloatType,
+			UnsignedByteType,
 		} = await import("three");
 		const { SVGLoader } = await import("three/examples/jsm/loaders/SVGLoader.js");
+		const { mergeVertices } = await import("three/examples/jsm/utils/BufferGeometryUtils.js");
 
 		const css = getComputedStyle(document.documentElement);
 		const cssColor = (name: string) => css.getPropertyValue(name).trim();
@@ -134,13 +139,23 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		};
 		const paint = () => {
 			const vw = innerWidth, vh = innerHeight;
-			if (bg.width !== vw || bg.height !== vh) {
-				bg.width = vw;
-				bg.height = vh;
+			const dpr = Math.min(devicePixelRatio, 2);
+			const pw = Math.round(vw * dpr), ph = Math.round(vh * dpr);
+			if (bg.width !== pw || bg.height !== ph) {
+				bg.width = pw;
+				bg.height = ph;
 			}
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 			ctx.globalAlpha = 1;
-			ctx.fillStyle = pageBg;
-			ctx.fillRect(0, 0, vw, vh);
+			// Clear to transparent so scrolling past the dark stage never shows a green fill
+			ctx.clearRect(0, 0, vw, vh);
+			// Paint each stage section's actual background only within its on-screen bounds
+			document.querySelectorAll<HTMLElement>("[data-glass-stage]").forEach((stage) => {
+				const r = stage.getBoundingClientRect();
+				if (r.bottom < 0 || r.top > vh) return;
+				ctx.fillStyle = pageBg;
+				ctx.fillRect(r.left, Math.max(0, r.top), r.width, Math.min(vh, r.bottom) - Math.max(0, r.top));
+			});
 			// solid boxes such as the hero button
 			document.querySelectorAll<HTMLElement>("[data-glass-stage] .sc-btn").forEach((btn) => {
 				const r = btn.getBoundingClientRect();
@@ -152,6 +167,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 			let lastEl: HTMLElement | null = null;
 			let style: CSSStyleDeclaration | null = null;
 			let ascent = 0;
+			let strokeW = 0;
 			for (const w of wordList) {
 				range.setStart(w.node, w.start);
 				range.setEnd(w.node, w.end);
@@ -164,24 +180,61 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 					(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing =
 						style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
 					ctx.fillStyle = style.color;
+					ctx.strokeStyle = style.color;
+					ctx.lineJoin = "round";
+					strokeW = parseFloat(style.webkitTextStrokeWidth || "0") || 0;
+					ctx.lineWidth = strokeW;
 					ctx.globalAlpha = opacityOf(w.el, w.stop);
 					ascent = ctx.measureText("Hg").fontBoundingBoxAscent;
 				}
 				const text = style!.textTransform === "uppercase" ? w.text.toUpperCase() : w.text;
+				if (strokeW > 0.1) ctx.strokeText(text, r.left, r.top + ascent);
 				ctx.fillText(text, r.left, r.top + ascent);
 			}
 			bgTex.needsUpdate = true;
 		};
 		collect();
 
+		// Back-face normal pass (16-bit half-float + MSAA so normals are completely
+		// smooth with zero 8-bit quantization staircasing).
+		const canHalfFloat =
+			renderer.capabilities.isWebGL2 ||
+			renderer.extensions.has("EXT_color_buffer_half_float") ||
+			renderer.extensions.has("OES_texture_half_float");
+		const backTarget = new WebGLRenderTarget(1, 1, {
+			minFilter: LinearFilter,
+			magFilter: LinearFilter,
+			depthBuffer: true,
+			type: canHalfFloat ? HalfFloatType : UnsignedByteType,
+			samples: renderer.capabilities.isWebGL2 ? 4 : 0,
+		});
+		const neutralNormal = new Color(0.5, 0.5, 1.0);
+		const backMaterial = new ShaderMaterial({
+			side: BackSide,
+			vertexShader: `
+				varying vec3 vN;
+				void main() {
+					vN = normalize(normalMatrix * normal);
+					gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+				}`,
+			fragmentShader: `
+				varying vec3 vN;
+				void main() {
+					vec3 n = normalize(vN);
+					gl_FragColor = vec4(n * 0.5 + 0.5, 1.0);
+				}`,
+		});
+
 		const material = new ShaderMaterial({
 			side: FrontSide,
+			transparent: true,
 			uniforms: {
 				uBg: { value: bgTex },
+				uBack: { value: backTarget.texture },
 				uRes: { value: new Vector2(1, 1) },
 				uCentre: { value: new Vector2(0.5, 0.5) },
-				uTint: { value: raw("--sc-light-green") },
 				uWhite: { value: raw("--sc-white") },
+				uBlack: { value: raw("--sc-black") },
 			},
 			vertexShader: `
 				varying vec3 vN;
@@ -194,73 +247,112 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 				}`,
 			fragmentShader: `
 				uniform sampler2D uBg;
+				uniform sampler2D uBack;
 				uniform vec2 uRes;
 				uniform vec2 uCentre;
-				uniform vec3 uTint;
 				uniform vec3 uWhite;
+				uniform vec3 uBlack;
 				varying vec3 vN;
 				varying vec3 vV;
 				void main() {
-					vec3 n = normalize(vN);
-					float facing = clamp(dot(n, vV), 0.0, 1.0);
-					float fres = pow(1.0 - facing, 2.2);
+					vec3 nFront = normalize(vN);
 					vec2 uv = gl_FragCoord.xy / uRes;
+					vec4 backSample = texture2D(uBack, uv);
+					vec3 nBack = backSample.a > 0.5 ? normalize(backSample.rgb * 2.0 - 1.0) : -nFront;
 
-					// Refraction: the body magnifies what is behind it (a thick lens)
-					// and the bevels bend it sharply along their normals.
-					vec2 lens = (uCentre - uv) * 0.05;
-					vec2 bend = -n.xy * (0.03 + 0.1 * fres);
-					vec2 off = lens + bend;
+					// Combine front and back surface normals for thick two-sided optical glass
+					vec3 n = normalize(nFront - nBack * 0.62);
 
-					// Frost: each colour is an average of nine nearby samples, so what
-					// is behind the glass reads softer than the page around it.
-					// Dispersion: red, green and blue bend by slightly different
-					// amounts, a faint prism split only towards the edges.
-					float k = 0.008 + 0.05 * fres;
-					vec2 px = 3.5 / uRes;
-					vec3 col = vec3(0.0);
-					for (int i = -1; i <= 1; i++) {
-						for (int j = -1; j <= 1; j++) {
-							vec2 o = vec2(float(i), float(j)) * px;
-							col.r += texture2D(uBg, uv + o + off * (1.0 - k)).r;
-							col.g += texture2D(uBg, uv + o + off).g;
-							col.b += texture2D(uBg, uv + o + off * (1.0 + k)).b;
-						}
-					}
-					col /= 9.0;
+					float facingFront = clamp(dot(nFront, vV), 0.0, 1.0);
+					float facingBack = clamp(dot(-nBack, vV), 0.0, 1.0);
+					float fresFront = pow(1.0 - facingFront, 3.0);
+					float fresBack = pow(1.0 - facingBack, 3.0);
+					float rim = pow(1.0 - facingFront, 5.2);
 
-					// a faint white frost for separation from the page
-					col = mix(col, uWhite, 0.07);
+					// Pronounced organic hand-cast glass ripple + high-IOR refraction
+					vec2 ripple = vec2(
+						sin(uv.y * 42.0 + nFront.x * 6.0) + 0.45 * sin(uv.x * 28.0 - uv.y * 34.0),
+						cos(uv.x * 42.0 + nFront.y * 6.0) + 0.45 * cos(uv.y * 28.0 + uv.x * 34.0)
+					) * 0.0062;
+					vec3 refr = refract(-vV, n, 1.0 / 1.5);
+					vec2 lens = (uCentre - uv) * 0.028;
+					vec2 bend = refr.xy * (0.105 + 0.13 * fresFront) - nBack.xy * 0.04;
+					vec2 off = lens + bend + ripple;
 
-					// studio reflections on top
-					vec3 r = reflect(-vV, n);
-					float top = smoothstep(0.45, 0.95, r.y);
-					float side = smoothstep(0.6, 1.0, r.x) * 0.5;
-					float spec = pow(max(dot(r, normalize(vec3(-0.4, 0.7, 0.6))), 0.0), 60.0);
-					col += uWhite * (fres * 0.3 + top * 0.12 + side * 0.08 + spec * 0.9);
+					// Light frosted diffusion + smooth 5-tap spectral chromatic dispersion
+					float disp = 0.018 + 0.055 * max(fresFront, fresBack);
+					vec2 frost = (1.6 + 2.2 * fresFront) / uRes;
 
-					// a soft prism fringe right on the rim
-					vec3 prism = 0.5 + 0.5 * cos(6.2831 * (fres * 1.3 + vec3(0.0, 0.33, 0.67)));
-					col += prism * smoothstep(0.5, 0.95, fres) * 0.025;
+					vec4 sR = 0.5 * texture2D(uBg, clamp(uv + off * (1.0 - disp) + vec2(-frost.x, frost.y), 0.0, 1.0))
+					        + 0.5 * texture2D(uBg, clamp(uv + off * (1.0 - disp) + vec2(frost.x, -frost.y), 0.0, 1.0));
+					vec4 sY = texture2D(uBg, clamp(uv + off * (1.0 - disp * 0.5), 0.0, 1.0));
+					vec4 sG = 0.5 * texture2D(uBg, clamp(uv + off + vec2(frost.x, frost.y), 0.0, 1.0))
+					        + 0.5 * texture2D(uBg, clamp(uv + off - vec2(frost.x, frost.y), 0.0, 1.0));
+					vec4 sC = texture2D(uBg, clamp(uv + off * (1.0 + disp * 0.5), 0.0, 1.0));
+					vec4 sB = 0.5 * texture2D(uBg, clamp(uv + off * (1.0 + disp) + vec2(-frost.x, -frost.y), 0.0, 1.0))
+					        + 0.5 * texture2D(uBg, clamp(uv + off * (1.0 + disp) + vec2(frost.x, frost.y), 0.0, 1.0));
 
-					gl_FragColor = vec4(col, 1.0);
+					float bgAlpha = clamp((sR.a + sY.a + sG.a + sC.a + sB.a) * 0.2, 0.0, 1.0);
+					vec3 refrCol = vec3(
+						sR.r * 0.55 + sY.r * 0.45,
+						sY.g * 0.25 + sG.g * 0.5 + sC.g * 0.25,
+						sC.b * 0.45 + sB.b * 0.55
+					);
+
+					// Neutral light frosting (no green tint)
+					vec3 col = mix(uWhite * 0.9, refrCol, bgAlpha);
+					col = mix(col, uWhite, 0.055 + fresFront * 0.045);
+
+					// High-contrast dark total-internal-reflection contour lines on both bevels
+					float darkEdge = smoothstep(0.28, 0.85, fresFront) * 0.55 + smoothstep(0.35, 0.9, fresBack) * 0.3;
+					col = mix(col, uBlack, clamp(darkEdge, 0.0, 0.68));
+
+					// Soft prismatic rainbow sheen along the rounded bevel rim
+					vec3 prism = 0.5 + 0.5 * cos(6.2831 * (fresFront * 1.25 + vec3(0.0, 0.33, 0.67)));
+					col += prism * smoothstep(0.35, 0.92, fresFront) * 0.075;
+
+					// Sleek liquid-glass edge highlights & sharp specular glints on rounded bevels
+					vec3 r = reflect(-vV, nFront);
+					float bevelBand = smoothstep(0.14, 0.72, 1.0 - facingFront);
+					float glint1 = pow(max(dot(r, normalize(vec3(-0.32, 0.78, 0.54))), 0.0), 150.0);
+					float glint2 = pow(max(dot(r, normalize(vec3(0.58, -0.48, 0.65))), 0.0), 85.0);
+					float edgeRibbon = pow(max(dot(r, normalize(vec3(-0.18, 0.88, 0.44))), 0.0), 22.0) * bevelBand;
+					float edgeRibbon2 = pow(max(dot(r, normalize(vec3(0.72, 0.42, 0.55))), 0.0), 28.0) * bevelBand;
+					float rimGlow = pow(1.0 - facingFront, 4.2) * 0.75;
+					float specSum = glint1 * 1.65 + glint2 * 0.7 + edgeRibbon * 0.9 + edgeRibbon2 * 0.55 + rimGlow + rim * 0.5;
+					col += uWhite * specSum;
+
+					// Full opacity over the refracted stage; transparent frosted glass over other sections
+					float glassAlpha = clamp(0.16 + darkEdge * 0.45 + fresFront * 0.35 + specSum * 0.5, 0.0, 0.92);
+					float outAlpha = max(bgAlpha, glassAlpha);
+					gl_FragColor = vec4(col, outAlpha);
 				}`,
 		});
 
 		const insignia = new Group();
 		const parts: GroupT[] = [];
+		const meshes: InstanceType<typeof Mesh>[] = [];
 		for (const path of svg.paths) {
 			const part = new Group();
 			for (const shape of SVGLoader.createShapes(path)) {
-				const geo = new ExtrudeGeometry(shape, {
-					depth: 40,
+				const rawGeo = new ExtrudeGeometry(shape, {
+					depth: 28,
 					bevelEnabled: true,
-					bevelThickness: 12,
-					bevelSize: 7,
-					bevelSegments: 14,
-					curveSegments: 6,
+					bevelThickness: 11,
+					bevelSize: 5.5,
+					bevelOffset: -2.5,
+					bevelSegments: 24,
+					curveSegments: 12,
 				});
-				part.add(new Mesh(geo, material));
+				// Strip UVs and weld bevel vertices so computeVertexNormals() produces
+				// completely smooth interpolated normals with zero polygonal facets.
+				rawGeo.deleteAttribute("uv");
+				const geo = mergeVertices(rawGeo, 1e-2);
+				geo.computeVertexNormals();
+				rawGeo.dispose();
+				const m = new Mesh(geo, material);
+				meshes.push(m);
+				part.add(m);
 			}
 			parts.push(part);
 			insignia.add(part);
@@ -283,22 +375,24 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		scene.add(holder);
 
 		// Layout
-		let w = 0, h = 0, baseX = 0, baseY = 0;
+		let w = 0, h = 0, baseX = 0, baseY = 0, hoverRadius = 150;
 		const resize = () => {
 			w = innerWidth;
 			h = innerHeight;
 			renderer.setSize(w, h, false);
 			const buf = renderer.getDrawingBufferSize(new Vector2());
+			backTarget.setSize(buf.x, buf.y);
 			material.uniforms.uRes.value.copy(buf);
 			collect();
 			camera.aspect = w / h;
 			camera.updateProjectionMatrix();
 			const s = Math.min(w / 1440, h / 900);
-			const scale = (mobile ? 0.9 : 1.2) * Math.max(0.55, s);
+			const scale = (mobile ? 0.52 : 0.68) * Math.max(0.55, s);
 			holder.scale.setScalar(scale);
-			// over the headline, so the glass has words to bend
-			baseX = mobile ? 20 : 40;
-			baseY = mobile ? 60 : 40;
+			// centred right over the stacked hero headline
+			baseX = 0;
+			baseY = 0;
+			hoverRadius = Math.max(110, 210 * scale);
 		};
 		resize();
 		addEventListener("resize", resize);
@@ -314,16 +408,26 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		addEventListener("resize", () => (end = stageEnd()));
 
 		let px = 0, py = 0, tx = 0, ty = 0;
+		let pointerActive = false, mx = -9999, my = -9999;
 		addEventListener("pointermove", (e) => {
+			pointerActive = true;
+			mx = e.clientX;
+			my = e.clientY;
 			tx = (e.clientX / innerWidth) * 2 - 1;
 			ty = (e.clientY / innerHeight) * 2 - 1;
 		}, { passive: true });
+		document.addEventListener("pointerleave", () => {
+			pointerActive = false;
+			tx = 0;
+			ty = 0;
+		});
 
 		let visible = true;
 		document.addEventListener("visibilitychange", () => (visible = !document.hidden));
 
 		const t0 = performance.now();
 		let smooth = 0;
+		let hover = 0;
 		const frame = () => {
 			requestAnimationFrame(frame);
 			const y = scrollY;
@@ -334,17 +438,26 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 			const t = (performance.now() - t0) / 1000;
 			const p = Math.min(1, Math.max(0, y / Math.max(1, end - innerHeight)));
 			smooth += (p - smooth) * 0.08;
-			px += (tx - px) * 0.05;
-			py += (ty - py) * 0.05;
+			px += (tx - px) * 0.08;
+			py += (ty - py) * 0.08;
 
-			// whole mark: float, slow turn, pointer tilt
-			holder.position.x = baseX;
-			holder.position.y = baseY + Math.sin(t * 0.6) * 14 - smooth * 120;
-			holder.rotation.x = 0.18 + py * 0.18 + smooth * 0.6;
-			holder.rotation.y = -0.35 + Math.sin(t * 0.25) * 0.12 + px * 0.3 + smooth * 0.9;
-			holder.rotation.z = -0.06 + smooth * 0.2;
+			// whole mark: float, slow turn, stronger inverted pointer parallax & tilt
+			const moveX = mobile ? 28 : 80;
+			const moveY = mobile ? 22 : 60;
+			holder.position.x = baseX - px * moveX;
+			holder.position.y = baseY + Math.sin(t * 0.6) * 12 + py * moveY - smooth * 120;
+			holder.rotation.x = 0.16 - py * 0.42 + smooth * 0.6;
+			holder.rotation.y = -0.3 + Math.sin(t * 0.25) * 0.12 - px * 0.65 + smooth * 0.9;
+			holder.rotation.z = -0.06 + px * 0.08 + smooth * 0.2;
 
-			// parts: open up, then fly out of frame in opposite directions
+			// detect pointer hovering over the insignia so its parts separate for legibility
+			const c = holder.position.clone().project(camera);
+			const screenCx = (c.x * 0.5 + 0.5) * w;
+			const screenCy = (0.5 - c.y * 0.5) * h;
+			const hovering = pointerActive && Math.hypot(mx - screenCx, my - screenCy) < hoverRadius;
+			hover += ((hovering ? 1 : 0) - hover) * 0.085;
+
+			// parts: separate on hover or scroll, then fly out of frame in opposite directions
 			const open = Math.min(1, smooth * 1.6);
 			const out = Math.max(0, (smooth - 0.35) / 0.65);
 			const e = out * out * (3 - 2 * out);
@@ -352,13 +465,16 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 				const dir = i === 0 ? -1 : 1;
 				const home = partHome[i];
 				part.position.set(
-					home.x + dir * (open * 70 + e * 900),
-					home.y - dir * (open * 70 + e * 650),
-					dir * (open * 60 + e * 300),
+					home.x + dir * (hover * 145 + open * 70 + e * 900),
+					home.y - dir * (hover * 115 + open * 70 + e * 650),
+					dir * (hover * 70 + open * 60 + e * 300),
 				);
-				part.rotation.set(dir * e * 1.2, dir * (open * 0.35 + e * 1.4), dir * e * 0.8);
+				part.rotation.set(
+					dir * (hover * 0.14 + e * 1.2),
+					dir * (hover * 0.32 + open * 0.35 + e * 1.4),
+					dir * (hover * 0.1 + e * 0.8),
+				);
 			});
-
 
 			// repaint what is behind the glass when the page moved or every ~1/4 s
 			const now = performance.now();
@@ -367,13 +483,27 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 				paintedY = y;
 				paintedAt = now;
 			}
-			const c = holder.position.clone().project(camera);
 			material.uniforms.uCentre.value.set(c.x * 0.5 + 0.5, c.y * 0.5 + 0.5);
 
+			// Pass 1: back-face normals
+			for (const m of meshes) m.material = backMaterial;
+			renderer.setRenderTarget(backTarget);
+			renderer.setClearColor(neutralNormal, 0);
+			renderer.clear();
+			renderer.render(scene, camera);
+
+			// Pass 2: front-face crystal refraction
+			for (const m of meshes) m.material = material;
+			renderer.setRenderTarget(null);
+			renderer.setClearColor(darkGreen, 0);
 			renderer.render(scene, camera);
 		};
 		let paintedY = -1;
 		let paintedAt = 0;
+		addEventListener("sc-glass-repaint", () => {
+			collect();
+			paintedY = -1;
+		});
 		root.classList.add("is-live");
 		requestAnimationFrame(frame);
 	};
@@ -410,7 +540,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 		position: absolute;
 		inset-block-start: 50%;
 		inset-inline-start: 50%;
-		width: min(38vw, 320px);
+		width: min(24vw, 180px);
 		height: auto;
 		translate: -50% -40%;
 		opacity: 0.35;

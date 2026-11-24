@@ -97,17 +97,20 @@ const link = href(value.link_url);
 			cursor.style.transform = `translate(${cx}px, ${cy}px)`;
 			raf = requestAnimationFrame(loop);
 		};
-		root.addEventListener("mousemove", (e) => {
-			x = e.clientX;
-			y = e.clientY;
+		const snap = (ex: number, ey: number) => {
+			x = ex;
+			y = ey;
 			if (!raf) {
 				cx = x;
 				cy = y;
+				cursor.style.transform = `translate(${cx}px, ${cy}px)`;
 				loop();
 			}
-		});
+		};
+		root.addEventListener("mousemove", (e) => snap(e.clientX, e.clientY));
 		rows.forEach((row, i) => {
-			row.addEventListener("mouseenter", () => {
+			row.addEventListener("mouseenter", (e) => {
+				snap(e.clientX, e.clientY);
 				const shot = shots[i];
 				shots.forEach((s) => s?.classList.toggle("is-on", s === shot));
 				cursor.classList.toggle("is-on", !!shot);

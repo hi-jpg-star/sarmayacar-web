@@ -38,7 +38,14 @@ const w = words(headline);
 		{!isHome && eyebrow && <p class="sc-label sc-label--rule hero__eyebrow" data-reveal>{eyebrow}</p>}
 		{
 			isHome ? (
-				<h1 class="sc-display hero__title">{headline}</h1>
+				<h1 class="sc-display hero__title" aria-label={headline}>
+					{w.map((word, i) => (
+						<>
+							{i > 0 && " "}
+							<span class="hero__row" aria-hidden="true">{word}</span>
+						</>
+					))}
+				</h1>
 			) : (
 		<h1 class="sc-display hero__title" aria-label={headline}>
 			{
@@ -52,7 +59,7 @@ const w = words(headline);
 			)
 		}
 		{
-			(subheadline || cta) && (
+			!isHome && (subheadline || cta) && (
 				<div class="hero__aside">
 					{subheadline && <p class="sc-lead hero__sub">{subheadline}</p>}
 					{cta && (
@@ -79,21 +86,16 @@ const w = words(headline);
 			</div>
 		)
 	}
-
-	{isHome && <p class="hero__scroll sc-label" aria-hidden="true">Scroll<span /></p>}
 </section>
 
 <script>
-	// Loader on the home page: once per browser session, skipped with reduced motion.
+	// Loader on the home page: plays on visit/reload, skipped on back/forward or reduced motion.
 	const intro = document.querySelector<HTMLElement>(".intro");
 	if (intro) {
 		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-		let seen = false;
-		try {
-			seen = sessionStorage.getItem("sc-intro") === "1";
-			sessionStorage.setItem("sc-intro", "1");
-		} catch {}
-		if (seen || reduce) {
+		const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+		const isBack = nav?.type === "back_forward";
+		if (isBack || reduce) {
 			intro.remove();
 		} else {
 			document.documentElement.classList.add("intro-running");
@@ -108,6 +110,90 @@ const w = words(headline);
 	requestAnimationFrame(() => {
 		document.querySelectorAll(".hero__title").forEach((t) => t.classList.add("is-in"));
 	});
+
+	// Fit each word of the home hero headline to the full width of the page.
+	const homeTitle = document.querySelector<HTMLElement>(".hero--home .hero__title");
+	if (homeTitle) {
+		const rows = Array.from(homeTitle.querySelectorAll<HTMLElement>(".hero__row"));
+		const fitRows = () => {
+			const targetW = homeTitle.clientWidth;
+			if (!targetW || !rows.length) return;
+			for (const row of rows) {
+				row.style.fontSize = "100px";
+				const w = row.getBoundingClientRect().width;
+				if (w > 0) row.style.fontSize = `${(100 * targetW) / w}px`;
+			}
+			// Keep the 3 stacked lines comfortably within the viewport height
+			const maxH = Math.max(240, innerHeight - 120);
+			const totalH = homeTitle.getBoundingClientRect().height;
+			if (totalH > maxH) {
+				const k = maxH / totalH;
+				for (const row of rows) {
+					row.style.fontSize = `${parseFloat(row.style.fontSize) * k}px`;
+				}
+			}
+			dispatchEvent(new Event("sc-glass-repaint"));
+		};
+		fitRows();
+		document.fonts?.ready.then(fitRows);
+		addEventListener("resize", fitRows);
+
+		// Smooth proximity-based font weight gradation across each hero line on pointer move.
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const heroSection = homeTitle.closest<HTMLElement>(".hero--home");
+		if (!reduce && heroSection && rows.length) {
+			const current = rows.map(() => 0);
+			const target = rows.map(() => 0);
+			let raf = 0;
+
+			const step = () => {
+				raf = 0;
+				let moving = false;
+				for (let i = 0; i < rows.length; i++) {
+					const diff = target[i] - current[i];
+					if (Math.abs(diff) > 0.002) {
+						current[i] += diff * 0.14;
+						moving = true;
+					} else {
+						current[i] = target[i];
+					}
+					rows[i].style.setProperty("--w", current[i].toFixed(4));
+				}
+				if (moving) raf = requestAnimationFrame(step);
+			};
+
+			const kick = () => {
+				if (!raf) raf = requestAnimationFrame(step);
+			};
+
+			heroSection.addEventListener(
+				"pointermove",
+				(e) => {
+					const rects = rows.map((r) => r.getBoundingClientRect());
+					const centers = rects.map((r) => r.top + r.height * 0.5);
+					// Radius = distance between adjacent row centers so when pointer is centered
+					// on one line, its neighbors stay at default weight; moving toward a neighbor
+					// smoothly blends thickness across both lines.
+					const spacing =
+						centers.length > 1
+							? Math.abs(centers[1] - centers[0])
+							: rects[0]?.height || 160;
+					const radius = Math.max(1, spacing);
+					for (let i = 0; i < rows.length; i++) {
+						const d = Math.min(1, Math.abs(e.clientY - centers[i]) / radius);
+						target[i] = 0.5 * (1 + Math.cos(Math.PI * d));
+					}
+					kick();
+				},
+				{ passive: true },
+			);
+
+			heroSection.addEventListener("pointerleave", () => {
+				for (let i = 0; i < target.length; i++) target[i] = 0;
+				kick();
+			});
+		}
+	}
 
 	// Media frame widens to full bleed as it scrolls up (standard pages).
 	const frames = document.querySelectorAll<HTMLElement>("[data-hero-media]");
@@ -188,8 +274,7 @@ const w = words(headline);
 		flex-direction: column;
 		justify-content: center;
 		min-height: 100svh;
-		padding-block: calc(var(--sc-header-h) + 24px) clamp(56px, 7vw, 96px);
-		background: transparent;
+		padding-block: calc(var(--sc-header-h) + 12px) clamp(24px, 4vw, 48px);
 		overflow: visible;
 	}
 
@@ -206,14 +291,28 @@ const w = words(headline);
 	.hero--home .hero__head {
 		justify-items: center;
 		text-align: center;
-		gap: clamp(32px, 4vw, 56px);
+		max-width: none;
+		width: 100%;
+		padding-inline: clamp(12px, 2vw, 32px);
 	}
 
 	.hero--home .hero__title {
-		font-size: clamp(52px, 10.5vw, 152px);
-		line-height: 0.98;
-		max-width: 11ch;
-		text-wrap: balance;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		line-height: 0.88;
+		letter-spacing: -0.04em;
+		text-transform: uppercase;
+		max-width: none;
+		width: 100%;
+	}
+
+	.hero--home .hero__row {
+		display: inline-block;
+		white-space: nowrap;
+		paint-order: stroke fill;
+		-webkit-text-stroke-color: currentColor;
+		-webkit-text-stroke-width: calc(var(--w, 0) * 0.052em);
 	}
 
 	.hero--home .hero__aside {
