@@ -41,8 +41,8 @@ body:has(.glass) {
 
 /* The page sits on top of the footer and slides up off it at the end */
 #main {
-	position: relative;
-	z-index: 1;
+	/* no stacking context here, so fixed layers inside (loader, glass) can
+	   still sit above the header; the footer uses z-index -1 instead */
 	background: var(--sc-white);
 }
 

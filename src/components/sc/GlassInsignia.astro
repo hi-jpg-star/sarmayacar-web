@@ -208,7 +208,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 
 					// Refraction: the body magnifies what is behind it (a thick lens)
 					// and the bevels bend it sharply along their normals.
-					vec2 lens = (uCentre - uv) * 0.16;
+					vec2 lens = (uCentre - uv) * 0.2;
 					vec2 bend = -n.xy * (0.05 + 0.12 * fres);
 					vec2 off = lens + bend;
 
@@ -221,7 +221,7 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 					col.b = texture2D(uBg, uv + off * (1.0 + k)).b;
 
 					// a faint green body tint and a little extra depth
-					col = mix(col, col * (0.75 + uTint * 0.6), 0.35);
+					col = mix(col, col * (0.85 + uTint * 0.5), 0.25);
 
 					// studio reflections on top
 					vec3 r = reflect(-vV, n);
@@ -285,10 +285,10 @@ import insigniaUrl from "../../assets/brand/insignia.svg?url";
 			camera.aspect = w / h;
 			camera.updateProjectionMatrix();
 			const s = Math.min(w / 1440, h / 900);
-			const scale = (mobile ? 0.85 : 1.05) * Math.max(0.55, s);
+			const scale = (mobile ? 0.9 : 1.2) * Math.max(0.55, s);
 			holder.scale.setScalar(scale);
 			// over the headline, so the glass has words to bend
-			baseX = mobile ? 40 : w > 1100 ? 60 : 30;
+			baseX = mobile ? 30 : w > 1100 ? -30 : -10;
 			baseY = mobile ? -40 : -70;
 		};
 		resize();
