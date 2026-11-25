@@ -161,7 +161,7 @@ body {
 }
 
 .sc-h3 {
-	font-weight: 400;
+	font-weight: 300;
 	font-size: clamp(22px, 2vw, 30px);
 	line-height: 1.2;
 	letter-spacing: -0.015em;
@@ -295,24 +295,27 @@ body {
 	transform: none;
 }
 
-/* Line-by-line masked headline reveal: wrap lines in .sc-line > span */
+/* Word-by-word headline reveal: wrap words in .sc-line > span. Words rise
+   and fade in; nothing masks them, so tight Light headlines never lose the
+   tails of their letters. */
 .sc-line {
 	display: block;
-	overflow: hidden;
-	/* room for accents, descenders and side bearings so the mask never clips letters */
-	padding: 0.06em 0.08em 0.16em;
-	margin: -0.06em -0.08em -0.16em;
 }
 
 .sc-line > span {
 	display: block;
-	transform: translateY(105%);
-	transition: transform 1.3s var(--sc-ease);
-	transition-delay: calc(var(--line-i, 0) * 110ms + var(--line-delay, 0ms));
+	opacity: 0;
+	transform: translateY(0.35em);
+	transition:
+		opacity 0.9s var(--sc-ease),
+		transform 1.1s var(--sc-ease);
+	transition-delay: calc(var(--line-i, 0) * 70ms + var(--line-delay, 0ms));
 }
 
 .is-in .sc-line > span,
-.sc-line.is-in > span {
+.sc-line.is-in > span,
+html:not(.js) .sc-line > span {
+	opacity: 1;
 	transform: none;
 }
 

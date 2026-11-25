@@ -47,15 +47,7 @@ const w = words(headline);
 					))}
 				</h1>
 			) : (
-		<h1 class="sc-display hero__title" aria-label={headline}>
-			{
-				w.map((word, i) => (
-					<span class="sc-line hero__word" style={`--line-i:${i}; --line-delay:${isHome ? 500 : 150}ms`} aria-hidden="true">
-						<span>{word}</span>
-					</span>
-				))
-			}
-		</h1>
+		<h1 class="sc-display hero__title hero__title--page">{headline}</h1>
 			)
 		}
 		{
@@ -288,6 +280,27 @@ const w = words(headline);
 		max-width: 14ch;
 	}
 
+	/* Inner pages: a large, static Light headline, left aligned */
+	.hero__title--page {
+		max-width: 15ch;
+		font-size: clamp(48px, 8.6vw, 144px);
+		line-height: 1;
+		animation: hero-in 1.2s var(--sc-ease) both;
+	}
+
+	@keyframes hero-in {
+		from {
+			opacity: 0.001;
+			transform: translateY(0.12em);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.hero__title--page {
+			animation: none;
+		}
+	}
+
 	.hero--home .hero__head {
 		justify-items: center;
 		text-align: center;
@@ -321,11 +334,6 @@ const w = words(headline);
 		flex-direction: column;
 		align-items: center;
 		max-width: 620px;
-	}
-
-	.hero__word {
-		display: inline-block;
-		margin-inline-end: 0.14em; /* + the mask padding = the usual word space */
 	}
 
 	.hero__aside {

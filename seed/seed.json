@@ -2235,17 +2235,18 @@
 							"_version": 1,
 							"_key": "hero",
 							"eyebrow": "Portfolio",
-							"headline": "Backing ground-breaking ideas"
+							"headline": "The companies we back",
+							"subheadline": "Fifteen ventures and ten Operator Angel companies, across fintech, logistics, health, agriculture, entertainment and more."
 						},
 						{
 							"_type": "sc_portfolio",
 							"_version": 1,
 							"_key": "grid",
 							"headline": "Our portfolio",
-							"ventures_label": "Portfolio",
-							"ventures_intro": "Sarmayacar aims to be the first choice of Pakistan-based ventures. We look for technology-enabled businesses with a sufficiently high TAM. Investments include key sectors which continue to grow, such as fintech, mobility, entertainment, hospitality and gaming.",
-							"angels_label": "Operators",
-							"angels_intro": "In 2021, we launched our Operator Angel Program. As the market flourished, we encountered ideas where mentorship along with capital was required. Through our own founders, this program targets the earliest stages of company building. The Operators provide strategic input which allows for stronger and more sustainable company building."
+							"ventures_label": "Ventures",
+							"ventures_intro": "Our main fund backs technology businesses in Pakistan with large markets and the ambition to lead them, and writes larger cheques as companies grow.",
+							"angels_label": "Operator Angels",
+							"angels_intro": "Since 2021, our Operator Angel program has backed ideas at the earliest stage. Founders from our own portfolio invest alongside us and work with the teams directly, so capital comes with the advice of people who have built companies here."
 						}
 					]
 				}
@@ -2261,11 +2262,19 @@
 					"title": "Team",
 					"content": [
 						{
+							"_type": "sc_hero",
+							"_version": 1,
+							"eyebrow": "Team",
+							"headline": "Bankers, investors and company builders",
+							"subheadline": "Our General Partners bring experience from banking, private equity and building companies. A dedicated team runs deals, supports the portfolio and keeps the fund running.",
+							"_key": "hero"
+						},
+						{
 							"_type": "sc_team",
 							"_version": 1,
 							"_key": "team",
 							"eyebrow": "Team",
-							"intro": "Sarmayacar is run by professionals with experience in banking, private equity, and company building. Our General Partners are supported by a skilled team who are adept at facilitating deals, managing portfolios, and handling various facets of our operations.",
+							"intro": "Every founder we back works with this team, from the first conversation to the follow-on round.",
 							"join_headline": "Join our team",
 							"join_text": "We're always on the lookout for talented individuals. Email us at",
 							"join_email": "connect@sarmayacar.com"
@@ -2288,7 +2297,8 @@
 							"_version": 1,
 							"_key": "hero",
 							"eyebrow": "News",
-							"headline": "Learn more about us and where we have been featured"
+							"headline": "In the news",
+							"subheadline": "Press coverage, our newsletter and the events where we meet founders."
 						},
 						{
 							"_type": "sc_news_feed",
@@ -2314,35 +2324,39 @@
 							"_version": 1,
 							"_key": "hero",
 							"eyebrow": "About us",
-							"headline": "Pioneering venture capital in Pakistan"
+							"headline": "Venture capital, built for Pakistan"
 						},
 						{
 							"_type": "sc_text",
 							"_version": 1,
 							"_key": "story",
-							"body": "Sarmayacar started off as an Angel Syndicate in 2016. Citing a dearth of professionally managed Venture Capital in Pakistan, we domiciled our first fund in 2018. The motive was twofold, whereby founders have access to value-add capital, and investors have a way to explore such opportunities from a risk-managed fund.\n\nThe General Partners have since expanded the team, with two offices across the country and wide connectivity within the broader region and ecosystem."
+							"body": "Sarmayacar began as an angel syndicate in 2016. Pakistan had little professionally managed venture capital, so in 2018 we set up our first fund. Founders gain capital that comes with real support, and investors gain a risk-managed way to back Pakistan's startups.\n\nSince then our General Partners have grown the team, opened two offices and built a wide network across the region and its ecosystem."
 						},
 						{
 							"_type": "sc_values",
 							"_version": 1,
 							"_key": "values",
-							"headline": "Our values",
+							"headline": "What we stand for",
 							"items": [
 								{
+									"icon": null,
 									"title": "Trusted Partner",
-									"description": "We believe trust and mutual support is a cornerstone of the work we do. From our investors to our founders, we believe in transparency with each other as well as following through on commitments."
+									"description": "Trust is the base of everything we do. We are open with founders and investors alike, and we follow through on what we commit to."
 								},
 								{
+									"icon": null,
 									"title": "Conviction-led",
-									"description": "We are decisive and believe in honouring our decisions. To remain accountable, every decision is consensus based and evidence driven; we don't mind putting our judgment on the line."
+									"description": "We decide together, on evidence, and we stand by our decisions. We are willing to put our judgment on the line."
 								},
 								{
+									"icon": null,
 									"title": "Beyond Capital Returns",
-									"description": "Our work is purpose-led and that drives our investment philosophy. We care about our impact on the overall community and like to share our learnings across."
+									"description": "Our purpose shapes how we invest. We care about our impact on the wider community and share what we learn."
 								},
 								{
+									"icon": null,
 									"title": "Here for Good",
-									"description": "We focus on building long-term and sustainable partnerships. We value diversity in our community and consider it a strong tenet of the Sarmayacar legacy."
+									"description": "We build long-term partnerships. We value diversity in our community and see it as part of what Sarmayacar leaves behind."
 								}
 							]
 						},
@@ -2350,26 +2364,16 @@
 							"_type": "sc_timeline",
 							"_version": 1,
 							"_key": "timeline",
-							"headline": "We back daring entrepreneurs building market-transforming technology"
+							"headline": "Our story so far"
 						},
 						{
 							"_type": "sc_image_card",
 							"_version": 1,
 							"_key": "team",
-							"headline": "Our Team",
-							"body": "Sarmayacar is run by professionals with experience in banking, private equity and company building. The General Partners are supported by a skilled team who assist on deals, portfolio management and other aspects.",
+							"headline": "Our team",
+							"body": "Our General Partners bring experience from banking, private equity and building companies, supported by a team that runs deals and works with the portfolio.",
 							"link_label": "See the team",
 							"link_url": "/team"
-						},
-						{
-							"_type": "sc_intro",
-							"_version": 1,
-							"_key": "connect",
-							"layout": "text-right",
-							"headline": "Connect with Sarmayacar",
-							"body": "As a sector-agnostic fund, Sarmayacar invests in a variety of startups operating in Pakistan. The fund invests in pre-revenue companies through the Operator Angel program, while we deploy larger cheques for later-stage companies through the main fund.",
-							"cta_label": "Get funding",
-							"cta_url": "/get-funding"
 						}
 					]
 				}
@@ -2390,8 +2394,8 @@
 							"_key": "intro",
 							"layout": "label-left",
 							"eyebrow": "Get funding",
-							"headline": "If you are a founder seeking to turbocharge your growth, you've come to the right place.",
-							"body": "Our funds are sector agnostic, focused primarily on Pakistan. Sarmayacar brings together an experienced, passionate team of investment professionals who can help you navigate the local market, make strategic decisions and raise follow-on funding. If this appeals to you, fill out the form and our team will be in touch shortly.",
+							"headline": "Building in Pakistan? Let's talk.",
+							"body": "Our funds are sector agnostic and focused on Pakistan. Alongside capital, our team helps you navigate the local market, make strategic decisions and raise follow-on funding.\n\nTell us about your company and we will be in touch.",
 							"cta_label": "Apply for funding",
 							"cta_url": "https://tally.so/r/nP5AJd"
 						},
@@ -2405,8 +2409,8 @@
 							"_type": "sc_image_card",
 							"_version": 1,
 							"_key": "team",
-							"headline": "Our Team",
-							"body": "Sarmayacar is run by professionals with experience in banking, private equity and company building. The General Partners are supported by a skilled team who assist on deals, portfolio management and other aspects.",
+							"headline": "Our team",
+							"body": "Our General Partners bring experience from banking, private equity and building companies, supported by a team that runs deals and works with the portfolio.",
 							"link_label": "See the team",
 							"link_url": "/team"
 						}

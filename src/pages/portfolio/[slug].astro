@@ -1,0 +1,114 @@
+---
+/**
+ * One portfolio company at /portfolio/<slug>. The list on the Portfolio page
+ * (the sc_portfolio block) links here. Content comes from the "companies"
+ * collection; edit it in the admin, not here.
+ */
+import { decodeSlug, getEmDashCollection, getEmDashEntry } from "emdash";
+import { Image, PortableText } from "emdash/ui";
+import Base from "../../layouts/Base.astro";
+import DetailPage from "../../components/DetailPage.astro";
+import { byOrder, href } from "../../utils/sc";
+
+const slug = decodeSlug(Astro.params.slug);
+if (!slug) return Astro.rewrite("/404");
+
+const [{ entry: company, cacheHint }, { entries, cacheHint: listHint }] = await Promise.all([
+	getEmDashEntry("companies", slug),
+	getEmDashCollection("companies", { limit: 200 }),
+]);
+if (!company) return Astro.rewrite("/404");
+if (Astro.cache?.enabled) {
+	Astro.cache.set(cacheHint);
+	Astro.cache.set(listHint);
+}
+
+const d = company.data;
+const programLabel = d.program === "Angel Operators" ? "Operator Angels" : "Ventures";
+
+// The next company in the same programme, wrapping round to the first
+const same = entries.filter((c) => c.data.program === d.program).sort(byOrder);
+const at = same.findIndex((c) => c.id === company.id);
+const nextCo = same.length > 1 ? same[(at + 1) % same.length] : null;
+
+const facts = [
+	{ label: d.leader_title || "CEO", value: d.leaders },
+	{ label: "Industry", value: d.sector_label },
+	{ label: "Founded", value: d.founded },
+	{ label: "Partnered", value: d.partnered },
+	{ label: "Co-investors", value: d.co_investors },
+].filter((f): f is { label: string; value: string } => !!f.value);
+
+const site = href(d.website_url);
+const logo = d.logo || d.grid_logo;
+---
+
+<Base
+	title={`${d.title} — Portfolio`}
+	pageTitle={d.title}
+	description={`${d.title}${d.sector_label ? `, ${d.sector_label}` : ""}: a Sarmayacar ${programLabel.toLowerCase()} company.`}
+	content={{ collection: "companies", id: d.id, slug: company.id }}
+>
+	<DetailPage
+		back={{ href: "/portfolio", label: "Portfolio" }}
+		label={programLabel}
+		title={d.title}
+		facts={facts}
+		next={nextCo ? { href: `/portfolio/${nextCo.id}`, title: nextCo.data.title, label: "Next company" } : null}
+	>
+		{logo && <Image slot="media" image={logo} sizes="(max-width: 860px) 90vw, 40vw" alt={`${d.title} logo`} />}
+
+		{
+			d.description && (
+				<div class="sc-prose co-body">
+					<PortableText value={d.description} />
+				</div>
+			)
+		}
+		{
+			site && (
+				<a href={site} target="_blank" rel="noopener" class="sc-btn co-site">
+					{d.website_label || "Visit website"}
+					<span class="sc-btn__arrow" />
+				</a>
+			)
+		}
+		{
+			(d.gallery ?? []).length > 0 && (
+				<div class="co-gallery">
+					{d.gallery!.map((g) => g.image && <Image image={g.image} sizes="(max-width: 860px) 100vw, 50vw" alt="" />)}
+				</div>
+			)
+		}
+	</DetailPage>
+</Base>
+
+<style>
+	.co-body {
+		font-size: clamp(18px, 1.4vw, 20px);
+	}
+
+	.co-site {
+		margin-block-start: clamp(32px, 4vw, 48px);
+	}
+
+	.co-gallery {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+		margin-block-start: clamp(56px, 7vw, 96px);
+		width: min(100vw - var(--sc-gutter) * 2, var(--sc-max));
+	}
+
+	.co-gallery :global(img) {
+		width: 100%;
+		aspect-ratio: 4 / 3;
+		object-fit: cover;
+	}
+
+	@media (max-width: 600px) {
+		.co-gallery {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+</style>

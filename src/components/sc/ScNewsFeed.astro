@@ -71,7 +71,6 @@ const uid = `nf-${value._key}`;
 						aria-selected={i === 0 ? "true" : "false"}
 					>
 						{t.label}
-						<sup>{String(t.cards.length).padStart(2, "0")}</sup>
 					</button>
 				))
 			}
@@ -154,12 +153,6 @@ const uid = `nf-${value._key}`;
 		color: var(--sc-mid-grey);
 	}
 
-	.nf__tab sup {
-		font-size: 12px;
-		letter-spacing: 0.1em;
-		padding-block-start: 0.5em;
-	}
-
 	.nf__tab::after {
 		content: "";
 		position: absolute;
@@ -231,7 +224,7 @@ const uid = `nf-${value._key}`;
 	}
 
 	.nf__title {
-		font-size: 19px;
+		font-size: clamp(19px, 1.5vw, 22px);
 		line-height: 1.35;
 		letter-spacing: -0.01em;
 		text-wrap: pretty;

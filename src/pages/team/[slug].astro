@@ -1,0 +1,75 @@
+---
+/**
+ * One team member at /team/<slug>. The grid on the Team page (the sc_team
+ * block) links here. Content comes from the "team" collection; edit it in the
+ * admin, not here. Unpublished people are not shown.
+ */
+import { decodeSlug, getEmDashCollection, getEmDashEntry } from "emdash";
+import { Image, PortableText } from "emdash/ui";
+import Base from "../../layouts/Base.astro";
+import DetailPage from "../../components/DetailPage.astro";
+import { byOrder, href } from "../../utils/sc";
+
+const slug = decodeSlug(Astro.params.slug);
+if (!slug) return Astro.rewrite("/404");
+
+const [{ entry: person, cacheHint }, { entries, cacheHint: listHint }] = await Promise.all([
+	getEmDashEntry("team", slug),
+	getEmDashCollection("team", { limit: 100 }),
+]);
+if (!person) return Astro.rewrite("/404");
+if (Astro.cache?.enabled) {
+	Astro.cache.set(cacheHint);
+	Astro.cache.set(listHint);
+}
+
+const d = person.data;
+const people = [...entries].sort(byOrder);
+const at = people.findIndex((p) => p.id === person.id);
+const nextPerson = people.length > 1 ? people[(at + 1) % people.length] : null;
+const linkedin = href(d.linkedin);
+---
+
+<Base
+	title={`${d.title} — Team`}
+	pageTitle={d.title}
+	description={`${d.title}${d.job_title ? `, ${d.job_title}` : ""} at Sarmayacar.`}
+	content={{ collection: "team", id: d.id, slug: person.id }}
+>
+	<DetailPage
+		back={{ href: "/team", label: "Team" }}
+		label={d.job_title}
+		title={d.title}
+		lead={d.summary}
+		mediaKind="photo"
+		next={nextPerson ? { href: `/team/${nextPerson.id}`, title: nextPerson.data.title, label: "Next" } : null}
+	>
+		{d.photo && <Image slot="media" image={d.photo} sizes="(max-width: 860px) 90vw, 40vw" alt={d.title} />}
+
+		{
+			d.bio && (
+				<div class="sc-prose tp-bio">
+					<PortableText value={d.bio} />
+				</div>
+			)
+		}
+		{
+			linkedin && (
+				<a href={linkedin} target="_blank" rel="noopener" class="sc-btn tp-link">
+					LinkedIn
+					<span class="sc-btn__arrow" />
+				</a>
+			)
+		}
+	</DetailPage>
+</Base>
+
+<style>
+	.tp-bio {
+		font-size: clamp(18px, 1.4vw, 20px);
+	}
+
+	.tp-link {
+		margin-block-start: clamp(32px, 4vw, 48px);
+	}
+</style>

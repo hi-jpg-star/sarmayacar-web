@@ -22,7 +22,6 @@ const faqs = [...entries].sort(byOrder);
 				faqs.map((f, i) => (
 					<details class="fq__item" name={`faq-${value._key}`} data-reveal style={`--reveal-i:${Math.min(i, 6)}`}>
 						<summary>
-							<span class="fq__num sc-label">{String(i + 1).padStart(2, "0")}</span>
 							<span class="fq__q">{f.data.title}</span>
 							<span class="fq__icon" aria-hidden="true" />
 						</summary>
@@ -65,7 +64,7 @@ const faqs = [...entries].sort(byOrder);
 
 	.fq__item summary {
 		display: grid;
-		grid-template-columns: 48px minmax(0, 1fr) 24px;
+		grid-template-columns: minmax(0, 1fr) 24px;
 		align-items: center;
 		gap: 16px;
 		padding-block: 26px;
@@ -77,12 +76,12 @@ const faqs = [...entries].sort(byOrder);
 		display: none;
 	}
 
-	.fq__num {
-		color: var(--sc-light-green);
-	}
 
 	.fq__q {
-		font-size: clamp(18px, 1.6vw, 22px);
+		font-size: clamp(20px, 2vw, 28px);
+		font-weight: 300;
+		line-height: 1.25;
+		letter-spacing: -0.015em;
 		transition: transform 0.5s var(--sc-ease);
 	}
 

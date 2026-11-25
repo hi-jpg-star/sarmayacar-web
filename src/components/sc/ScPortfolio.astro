@@ -1,8 +1,13 @@
 ---
+/**
+ * Portfolio: the companies in two groups (Ventures and Operator Angels) as an
+ * editorial list. Each row links to the company's own page at
+ * /portfolio/<slug>, which src/pages/portfolio/[slug].astro renders.
+ */
 import { getEmDashCollection } from "emdash";
-import { Image, PortableText, type BlockComponentProps } from "emdash/ui";
+import { Image, type BlockComponentProps } from "emdash/ui";
 import type { PageContentBlock } from "../../../emdash-env";
-import { byOrder, href } from "../../utils/sc";
+import { byOrder } from "../../utils/sc";
 import { toParagraphs } from "../../utils/text";
 
 type Block = Extract<PageContentBlock, { _type: "sc_portfolio" }>;
@@ -15,34 +20,43 @@ if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
 const groups = [
 	{ key: "ventures", program: "Ventures", label: value.ventures_label || "Portfolio", intro: value.ventures_intro },
 	{ key: "angels", program: "Angel Operators", label: value.angels_label || "Operators", intro: value.angels_intro },
-].map((g) => ({ ...g, companies: entries.filter((c) => c.data.program === g.program).sort(byOrder) }))
+]
+	.map((g) => ({ ...g, companies: entries.filter((c) => c.data.program === g.program).sort(byOrder) }))
 	.filter((g) => g.companies.length > 0);
 const uid = `pf-${value._key}`;
+const year = (s?: string | null) => (s ? (s.match(/\d{4}/)?.[0] ?? s) : "");
 ---
 
 <section class="pf tone-light" data-tone="light" id={value.anchor_id || undefined} data-portfolio>
 	<div class="sc-container">
-		<div class="pf__tabs" role="tablist" aria-label={value.headline}>
-			{
-				groups.map((g, i) => (
-					<button
-						type="button"
-						role="tab"
-						class="pf__tab"
-						id={`${uid}-tab-${g.key}`}
-						aria-controls={`${uid}-panel-${g.key}`}
-						aria-selected={i === 0 ? "true" : "false"}
-					>
-						<span>{g.label}</span>
-						<sup>{String(g.companies.length).padStart(2, "0")}</sup>
-					</button>
-				))
-			}
-		</div>
+		{
+			groups.length > 1 && (
+				<div class="pf__tabs" role="tablist" aria-label={value.headline}>
+					{groups.map((g, i) => (
+						<button
+							type="button"
+							role="tab"
+							class="pf__tab"
+							id={`${uid}-tab-${g.key}`}
+							aria-controls={`${uid}-panel-${g.key}`}
+							aria-selected={i === 0 ? "true" : "false"}
+						>
+							{g.label}
+						</button>
+					))}
+				</div>
+			)
+		}
 
 		{
 			groups.map((g, i) => (
-				<div class="pf__panel" role="tabpanel" id={`${uid}-panel-${g.key}`} aria-labelledby={`${uid}-tab-${g.key}`} hidden={i !== 0}>
+				<div
+					class="pf__panel"
+					role={groups.length > 1 ? "tabpanel" : undefined}
+					id={`${uid}-panel-${g.key}`}
+					aria-labelledby={groups.length > 1 ? `${uid}-tab-${g.key}` : undefined}
+					hidden={i !== 0}
+				>
 					{g.intro && (
 						<div class="pf__intro">
 							{toParagraphs(g.intro).map((p) => (
@@ -50,23 +64,20 @@ const uid = `pf-${value._key}`;
 							))}
 						</div>
 					)}
-					<ul class="pf__grid">
+					<ul class="pf__list">
 						{g.companies.map((c, j) => (
 							<li style={`--j:${j}`}>
-								<button type="button" class="pf__tile" data-open={`${uid}-dlg-${c.id}`} id={c.id}>
-									<span class="pf__logo">
-										{c.data.grid_logo || c.data.logo ? (
-											<Image image={(c.data.grid_logo || c.data.logo)!} sizes="260px" alt={c.data.title} />
-										) : (
-											<span class="pf__name-fallback">{c.data.title}</span>
+								<a href={`/portfolio/${c.id}`} class="pf__row">
+									<span class="pf__logo" aria-hidden="true">
+										{(c.data.grid_logo || c.data.logo) && (
+											<Image image={(c.data.grid_logo || c.data.logo)!} sizes="120px" alt="" />
 										)}
 									</span>
-									<span class="pf__caption">
-										<span>{c.data.title}</span>
-										<span class="pf__sector">{c.data.sector_label}</span>
-									</span>
-									<span class="pf__plus" aria-hidden="true" />
-								</button>
+									<span class="pf__name">{c.data.title}</span>
+									<span class="pf__sector">{c.data.sector_label}</span>
+									<span class="pf__year">{year(c.data.partnered)}</span>
+									<span class="pf__arrow" aria-hidden="true">→</span>
+								</a>
 							</li>
 						))}
 					</ul>
@@ -74,80 +85,6 @@ const uid = `pf-${value._key}`;
 			))
 		}
 	</div>
-
-	{
-		groups.flatMap((g) =>
-			g.companies.map((c) => {
-				const site = href(c.data.website_url);
-				return (
-					<dialog class="sc-dialog" id={`${uid}-dlg-${c.id}`} aria-labelledby={`${uid}-dlg-${c.id}-t`}>
-						<div class="sc-dialog__panel">
-							<button type="button" class="sc-dialog__close" data-close aria-label="Close">
-								×
-							</button>
-							<div class="pfd__logo">
-								{(c.data.logo || c.data.grid_logo) && <Image image={(c.data.logo || c.data.grid_logo)!} sizes="240px" alt="" />}
-							</div>
-							<p class="sc-label pfd__program">{g.label}</p>
-							<h2 class="sc-h2 pfd__title" id={`${uid}-dlg-${c.id}-t`}>
-								{c.data.title}
-							</h2>
-							<dl class="sc-meta">
-								{c.data.leaders && (
-									<div>
-										<dt>{c.data.leader_title || "CEO"}</dt>
-										<dd>{c.data.leaders}</dd>
-									</div>
-								)}
-								{c.data.founded && (
-									<div>
-										<dt>Founded</dt>
-										<dd>{c.data.founded}</dd>
-									</div>
-								)}
-								{c.data.partnered && (
-									<div>
-										<dt>Partnered</dt>
-										<dd>{c.data.partnered}</dd>
-									</div>
-								)}
-								{c.data.sector_label && (
-									<div>
-										<dt>Industry</dt>
-										<dd>{c.data.sector_label}</dd>
-									</div>
-								)}
-								{c.data.co_investors && (
-									<div>
-										<dt>Co-investors</dt>
-										<dd>{c.data.co_investors}</dd>
-									</div>
-								)}
-							</dl>
-							{c.data.description && (
-								<div class="sc-prose pfd__body">
-									<PortableText value={c.data.description} />
-								</div>
-							)}
-							{site && (
-								<a href={site} target="_blank" rel="noopener" class="sc-btn pfd__site">
-									{c.data.website_label || "Visit website"}
-									<span class="sc-btn__arrow" />
-								</a>
-							)}
-							{(c.data.gallery ?? []).length > 0 && (
-								<div class="pfd__gallery">
-									{c.data.gallery!.map((g2) => (
-										<Image image={g2.image} sizes="320px" alt="" />
-									))}
-								</div>
-							)}
-						</div>
-					</dialog>
-				);
-			}),
-		)
-	}
 </section>
 
 <script>
@@ -162,46 +99,8 @@ const uid = `pf-${value._key}`;
 			}
 		};
 		tabs.forEach((t) => t.addEventListener("click", () => select(t)));
-
-		const open = (id: string) => {
-			const d = document.getElementById(id) as HTMLDialogElement | null;
-			if (!d) return;
-			d.showModal();
-			document.documentElement.style.overflow = "hidden";
-		};
-		root.querySelectorAll<HTMLButtonElement>("[data-open]").forEach((b) =>
-			b.addEventListener("click", () => {
-				open(b.dataset.open!);
-				history.replaceState(null, "", `#${b.id}`);
-			}),
-		);
-		root.querySelectorAll<HTMLDialogElement>("dialog").forEach((d) => {
-			const close = () => {
-				d.querySelector<HTMLElement>(".sc-dialog__panel")!.style.transform = "translateX(100%)";
-				setTimeout(() => {
-					d.close();
-					d.querySelector<HTMLElement>(".sc-dialog__panel")!.style.transform = "";
-				}, 450);
-			};
-			d.querySelector("[data-close]")?.addEventListener("click", close);
-			d.addEventListener("click", (e) => {
-				if (e.target === d) close();
-			});
-			d.addEventListener("close", () => {
-				document.documentElement.style.overflow = "";
-				history.replaceState(null, "", location.pathname);
-			});
-		});
-
-		// Deep link: /portfolio#bykea opens that company.
-		const hash = decodeURIComponent(location.hash.slice(1));
-		const tile = hash ? root.querySelector<HTMLButtonElement>(`.pf__tile[id="${CSS.escape(hash)}"]`) : null;
-		if (tile) {
-			const panel = tile.closest<HTMLElement>(".pf__panel")!;
-			const tab = tabs.find((t) => t.getAttribute("aria-controls") === panel.id);
-			if (tab) select(tab);
-			setTimeout(() => open(tile.dataset.open!), 300);
-		}
+		// /portfolio#operators opens the second list
+		if (location.hash === "#operators" && tabs[1]) select(tabs[1]);
 	}
 </script>
 
@@ -213,16 +112,12 @@ const uid = `pf-${value._key}`;
 	.pf__tabs {
 		display: flex;
 		gap: clamp(24px, 4vw, 56px);
-		border-block-end: 1px solid var(--sc-line);
 		margin-block-end: clamp(32px, 4vw, 56px);
 	}
 
 	.pf__tab {
 		position: relative;
-		display: flex;
-		align-items: flex-start;
-		gap: 8px;
-		padding-block: 0 18px;
+		padding-block: 0 14px;
 		border: 0;
 		background: none;
 		cursor: pointer;
@@ -234,22 +129,20 @@ const uid = `pf-${value._key}`;
 		transition: color 0.4s;
 	}
 
-	.pf__tab sup {
-		font-size: 12px;
-		letter-spacing: 0.1em;
-		padding-block-start: 0.5em;
-	}
-
 	.pf__tab::after {
 		content: "";
 		position: absolute;
 		inset-inline: 0;
-		inset-block-end: -1px;
+		inset-block-end: 0;
 		height: 2px;
 		background: var(--sc-light-green);
 		transform: scaleX(0);
 		transform-origin: left;
 		transition: transform 0.6s var(--sc-ease);
+	}
+
+	.pf__tab:hover {
+		color: var(--sc-dark-green-75);
 	}
 
 	.pf__tab[aria-selected="true"] {
@@ -265,182 +158,128 @@ const uid = `pf-${value._key}`;
 		margin-block-end: clamp(40px, 5vw, 72px);
 	}
 
-	.pf__grid {
+	.pf__list {
 		list-style: none;
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: 1px;
-		background: var(--sc-line);
-		border: 1px solid var(--sc-line);
+		border-block-end: 1px solid var(--sc-line);
 	}
 
-	.pf__grid li {
-		background: var(--sc-white);
+	.pf__list li {
+		border-block-start: 1px solid var(--sc-line);
 		animation: pf-in 0.8s var(--sc-ease) both;
-		animation-delay: calc(var(--j) * 45ms);
+		animation-delay: calc(min(var(--j), 12) * 40ms);
 	}
 
-	.pf__tile {
-		position: relative;
+	.pf__row {
 		display: grid;
-		grid-template-rows: 1fr auto;
-		width: 100%;
-		aspect-ratio: 1;
-		padding: 0;
-		border: 0;
-		background: var(--sc-white);
-		cursor: pointer;
-		font: inherit;
+		grid-template-columns: 120px minmax(0, 1fr) minmax(0, 0.6fr) 64px 32px;
+		align-items: center;
+		gap: 24px;
+		padding: clamp(18px, 2vw, 26px) 2vw;
+		margin-inline: -2vw;
 		color: inherit;
-		text-align: start;
-		overflow: hidden;
-		isolation: isolate;
-	}
-
-	.pf__tile::before {
-		content: "";
-		position: absolute;
-		inset: 0;
-		z-index: -1;
-		background: var(--sc-dark-green);
-		clip-path: inset(100% 0 0 0);
-		transition: clip-path 0.6s var(--sc-ease);
-	}
-
-	.pf__tile:hover::before,
-	.pf__tile:focus-visible::before {
-		clip-path: inset(0 0 0 0);
+		text-decoration: none;
+		transition: background-color 0.4s var(--sc-ease);
 	}
 
 	.pf__logo {
 		display: grid;
-		place-items: center;
-		padding: 6%;
+		place-items: center start;
+		height: 56px;
 	}
 
 	.pf__logo :global(img) {
-		width: 86%;
-		height: auto;
-		object-fit: contain;
-		filter: grayscale(1);
-		transition:
-			filter 0.5s var(--sc-ease),
-			transform 0.6s var(--sc-ease);
-	}
-
-	.pf__tile:hover .pf__logo :global(img),
-	.pf__tile:focus-visible .pf__logo :global(img) {
-		filter: grayscale(1) brightness(0) invert(1);
-		transform: scale(0.94);
-	}
-
-	.pf__name-fallback {
-		font-size: 22px;
-	}
-
-	.pf__caption {
-		display: flex;
-		justify-content: space-between;
-		gap: 12px;
-		padding: 16px 18px;
-		font-size: 13px;
-		transform: translateY(100%);
-		opacity: 0;
-		color: var(--sc-white);
-		transition:
-			transform 0.6s var(--sc-ease),
-			opacity 0.4s;
-	}
-
-	.pf__sector {
-		color: var(--sc-mid-grey);
-		text-align: end;
-	}
-
-	.pf__tile:hover .pf__caption,
-	.pf__tile:focus-visible .pf__caption {
-		transform: none;
-		opacity: 1;
-	}
-
-	.pf__plus {
-		position: absolute;
-		inset-block-start: 16px;
-		inset-inline-end: 16px;
-		width: 14px;
-		height: 14px;
-		background:
-			linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
-			linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat;
-		color: var(--sc-mid-grey);
-		transition:
-			transform 0.6s var(--sc-ease),
-			color 0.3s;
-	}
-
-	.pf__tile:hover .pf__plus {
-		transform: rotate(90deg);
-		color: var(--sc-white);
-	}
-
-	.pfd__logo {
-		display: grid;
-		place-items: center;
-		aspect-ratio: 16 / 9;
-		margin-block: 72px 32px;
-		border: 1px solid var(--sc-line);
-		padding: 2%;
-	}
-
-	.pfd__logo :global(img) {
-		height: 100%;
-		max-height: 240px;
+		max-width: 100%;
+		max-height: 56px;
 		width: auto;
 		object-fit: contain;
+		filter: grayscale(1);
+		opacity: 0.85;
+		transition:
+			filter 0.5s var(--sc-ease),
+			opacity 0.5s;
 	}
 
-	.pfd__program {
+	.pf__name {
+		font-size: clamp(24px, 2.6vw, 40px);
+		font-weight: 300;
+		line-height: 1.1;
+		letter-spacing: -0.025em;
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.pf__sector,
+	.pf__year {
+		font-size: 14px;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	.pf__year {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.pf__arrow {
+		justify-self: end;
+		font-size: 20px;
 		color: var(--sc-light-green);
-		margin-block-end: 12px;
+		transition: transform 0.5s var(--sc-ease);
 	}
 
-	.pfd__title {
-		margin-block-end: 32px;
+	.pf__row:hover,
+	.pf__row:focus-visible {
+		background-color: var(--sc-grey-25);
 	}
 
-	.pfd__body {
-		margin-block: 32px;
+	.pf__row:hover .pf__name,
+	.pf__row:focus-visible .pf__name {
+		transform: translateX(10px);
 	}
 
-	.pfd__gallery {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 8px;
-		margin-block-start: 40px;
+	.pf__row:hover .pf__arrow,
+	.pf__row:focus-visible .pf__arrow {
+		transform: translateX(6px);
 	}
 
-	.pfd__gallery :global(img) {
-		width: 100%;
-		aspect-ratio: 4 / 3;
-		object-fit: cover;
+	.pf__row:hover .pf__logo :global(img),
+	.pf__row:focus-visible .pf__logo :global(img) {
+		filter: none;
+		opacity: 1;
 	}
 
 	@keyframes pf-in {
 		from {
 			opacity: 0;
-			transform: translateY(16px);
+			transform: translateY(12px);
 		}
 	}
 
-	@media (max-width: 900px) {
-		.pf__grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+	@media (max-width: 860px) {
+		.pf__row {
+			grid-template-columns: 72px minmax(0, 1fr) 24px;
+			gap: 6px 16px;
 		}
 
-		.pf__caption {
-			transform: none;
-			opacity: 1;
-			color: inherit;
+		.pf__logo {
+			grid-row: span 2;
+		}
+
+		.pf__sector {
+			grid-column: 2;
+			grid-row: 2;
+		}
+
+		.pf__year {
+			display: none;
+		}
+
+		.pf__arrow {
+			grid-column: 3;
+			grid-row: 1 / span 2;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.pf__list li {
+			animation: none;
 		}
 	}
 </style>
