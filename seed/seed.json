@@ -2389,13 +2389,12 @@
 					"title": "Get funding",
 					"content": [
 						{
-							"_type": "sc_intro",
+							"_type": "sc_hero",
 							"_version": 1,
-							"_key": "intro",
-							"layout": "label-left",
+							"_key": "hero",
 							"eyebrow": "Get funding",
 							"headline": "Building in Pakistan? Let's talk.",
-							"body": "Our funds are sector agnostic and focused on Pakistan. Alongside capital, our team helps you navigate the local market, make strategic decisions and raise follow-on funding.\n\nTell us about your company and we will be in touch.",
+							"subheadline": "Our funds are sector agnostic and focused on Pakistan. Alongside capital, our team helps you navigate the local market, make strategic decisions and raise follow-on funding.",
 							"cta_label": "Apply for funding",
 							"cta_url": "https://tally.so/r/nP5AJd"
 						},

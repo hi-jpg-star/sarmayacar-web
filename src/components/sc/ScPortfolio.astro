@@ -69,8 +69,8 @@ const year = (s?: string | null) => (s ? (s.match(/\d{4}/)?.[0] ?? s) : "");
 							<li style={`--j:${j}`}>
 								<a href={`/portfolio/${c.id}`} class="pf__row">
 									<span class="pf__logo" aria-hidden="true">
-										{(c.data.grid_logo || c.data.logo) && (
-											<Image image={(c.data.grid_logo || c.data.logo)!} sizes="120px" alt="" />
+										{(c.data.logo || c.data.grid_logo) && (
+											<Image image={(c.data.logo || c.data.grid_logo)!} sizes="120px" alt="" />
 										)}
 									</span>
 									<span class="pf__name">{c.data.title}</span>

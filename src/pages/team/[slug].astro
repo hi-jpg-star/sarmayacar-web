@@ -44,7 +44,7 @@ const linkedin = href(d.linkedin);
 		mediaKind="photo"
 		next={nextPerson ? { href: `/team/${nextPerson.id}`, title: nextPerson.data.title, label: "Next" } : null}
 	>
-		{d.photo && <Image slot="media" image={d.photo} sizes="(max-width: 860px) 90vw, 40vw" alt={d.title} />}
+		{d.photo && <Image slot="media" image={d.photo} sizes="(max-width: 860px) 90vw, 40vw" loading="eager" alt={d.title} />}
 
 		{
 			d.bio && (

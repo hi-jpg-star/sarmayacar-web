@@ -56,7 +56,7 @@ const logo = d.logo || d.grid_logo;
 		facts={facts}
 		next={nextCo ? { href: `/portfolio/${nextCo.id}`, title: nextCo.data.title, label: "Next company" } : null}
 	>
-		{logo && <Image slot="media" image={logo} sizes="(max-width: 860px) 90vw, 40vw" alt={`${d.title} logo`} />}
+		{logo && <Image slot="media" image={logo} sizes="(max-width: 860px) 90vw, 40vw" loading="eager" alt={`${d.title} logo`} />}
 
 		{
 			d.description && (

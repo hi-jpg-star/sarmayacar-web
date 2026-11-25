@@ -1,5 +1,5 @@
 ---
-import { Image, type BlockComponentProps } from "emdash/ui";
+import type { BlockComponentProps } from "emdash/ui";
 import type { PageContentBlock } from "../../../emdash-env";
 
 type Block = Extract<PageContentBlock, { _type: "sc_values" }>;
@@ -15,9 +15,6 @@ const { value } = Astro.props;
 			{
 				(value.items ?? []).map((item, i) => (
 					<li class="vl__item" data-reveal style={`--reveal-i:${i}`}>
-						<span class="vl__top">
-							{item.icon && <Image image={item.icon} sizes="48px" alt="" class="vl__icon" />}
-						</span>
 						<h3 class="sc-h3">{item.title}</h3>
 						{item.description && <p class="vl__desc">{item.description}</p>}
 					</li>
@@ -60,18 +57,7 @@ const { value } = Astro.props;
 		border-inline-end: 0;
 	}
 
-	.vl__top {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-block-end: clamp(32px, 4vw, 64px);
-	}
 
-	.vl__top :global(.vl__icon) {
-		width: 40px;
-		height: 40px;
-		object-fit: contain;
-	}
 
 	.vl__desc {
 		font-size: 15px;
