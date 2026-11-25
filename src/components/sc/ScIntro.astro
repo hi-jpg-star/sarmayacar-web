@@ -1,0 +1,148 @@
+---
+import type { BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { href, isExternal, words } from "../../utils/sc";
+import { toParagraphs } from "../../utils/text";
+
+type Block = Extract<PageContentBlock, { _type: "sc_intro" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value, index } = Astro.props;
+const layout = value.layout || "text-right";
+const cta = value.cta_label ? href(value.cta_url) : undefined;
+const ext = isExternal(cta);
+const paragraphs = toParagraphs(value.body);
+const isClosing = layout === "closing";
+const tone = isClosing ? "dark" : "light";
+// As the first block on a page, it carries the page's h1 and clears the header.
+const Tag = index === 0 ? "h1" : "h2";
+---
+
+<section
+	class:list={["in sc-columns", `in--${layout}`, isClosing ? "tone-dark" : "tone-light", { "in--first": index === 0 }]}
+	data-tone={tone}
+	id={value.anchor_id || undefined}
+>
+	<div class="sc-container in__grid">
+		{value.eyebrow && <p class="sc-label sc-label--rule in__eyebrow" data-reveal>{value.eyebrow}</p>}
+		<Tag class:list={["in__title", isClosing ? "sc-display" : "sc-h2"]} data-reveal-group aria-label={value.headline}>
+			{
+				words(value.headline).map((w, i) => (
+					<span class="sc-line in__w" style={`--line-i:${i}`} aria-hidden="true">
+						<span>{w}</span>
+					</span>
+				))
+			}
+		</Tag>
+		<div class="in__body" data-reveal style="--reveal-i:2">
+			{paragraphs.map((p) => <p class="sc-lead">{p}</p>)}
+			{
+				cta && (
+					<a href={cta} class="sc-btn" target={ext ? "_blank" : undefined} rel={ext ? "noopener" : undefined}>
+						{value.cta_label}
+						<span class="sc-btn__arrow" />
+					</a>
+				)
+			}
+		</div>
+	</div>
+</section>
+
+<style>
+	.in {
+		padding-block: clamp(96px, 12vw, 176px);
+	}
+
+	.in--first {
+		padding-block-start: calc(var(--sc-header-h) + clamp(72px, 9vw, 140px));
+	}
+
+	.in__grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: clamp(28px, 4vw, 64px) clamp(32px, 5vw, 96px);
+		align-items: end;
+	}
+
+	.in__eyebrow {
+		grid-column: 1 / -1;
+		color: var(--sc-muted);
+	}
+
+	.in__w {
+		display: inline-block;
+		margin-inline-end: 0.24em;
+	}
+
+	.in__body {
+		display: grid;
+		gap: 28px;
+		justify-items: start;
+	}
+
+	.in__body .sc-lead {
+		color: var(--sc-muted);
+	}
+
+	.tone-light .in__body .sc-lead {
+		color: inherit;
+	}
+
+	/* label-left: small label in its own column, everything else beside it */
+	.in--label-left .in__grid {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+		align-items: start;
+	}
+
+	.in--label-left .in__eyebrow {
+		grid-column: 1;
+		grid-row: 1 / span 2;
+		padding-block-start: 1em;
+	}
+
+	.in--label-left .in__title,
+	.in--label-left .in__body {
+		grid-column: 2;
+	}
+
+	/* closing: a big statement across the page */
+	.in--closing {
+		padding-block: clamp(120px, 16vw, 240px);
+	}
+
+	.in--closing .in__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.in--closing .in__title {
+		max-width: 11ch;
+	}
+
+	.in--closing .in__body {
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: end;
+		gap: 32px;
+		padding-block-start: 32px;
+		border-block-start: 1px solid var(--sc-line-on-dark);
+		width: 100%;
+	}
+
+	.in--closing .sc-btn {
+		padding: 24px 34px;
+	}
+
+	@media (max-width: 800px) {
+		.in__grid,
+		.in--label-left .in__grid,
+		.in--closing .in__body {
+			grid-template-columns: 1fr;
+		}
+
+		.in--label-left .in__eyebrow,
+		.in--label-left .in__title,
+		.in--label-left .in__body {
+			grid-column: 1;
+			grid-row: auto;
+		}
+	}
+</style>

@@ -15,6 +15,14 @@
 		{
 			"binding": "DB",
 			"database_name": "sarmayacar-site",
+			"database_id": "a4577a02-7ae6-43b3-9984-627005752b89",
+		},
+	],
+	// Astro sessions (created by the first deploy). Previews need the id spelled out.
+	"kv_namespaces": [
+		{
+			"binding": "SESSION",
+			"id": "24c3a6891d71448a91825539913ab8f0",
 		},
 	],
 	"r2_buckets": [
@@ -23,6 +31,34 @@
 			"bucket_name": "sarmayacar-media",
 		},
 	],
+	// Worker Previews (one per pull request) don't inherit the bindings above.
+	// They use a separate STAGING copy of the database, session store and media,
+	// so unreviewed code in a pull request can never change live content.
+	// Refresh the staging copy from live when previews need newer content.
+	"previews": {
+		"d1_databases": [
+			{
+				"binding": "DB",
+				"database_name": "sarmayacar-staging",
+				"database_id": "7196566d-f775-4e6c-9f5b-c4f635336e0e",
+			},
+		],
+		"kv_namespaces": [
+			{
+				"binding": "SESSION",
+				"id": "97e6e24720aa4907bc219ebd9366863f",
+			},
+		],
+		"r2_buckets": [
+			{
+				"binding": "MEDIA",
+				"bucket_name": "sarmayacar-media-staging",
+			},
+		],
+		"durable_objects": {
+			"bindings": [{ "name": "EMDASH_ROOMS", "class_name": "EmDashRoom" }],
+		},
+	},
 	// Co-editing rooms, one Durable Object per entry being edited
 	"durable_objects": {
 		"bindings": [{ "name": "EMDASH_ROOMS", "class_name": "EmDashRoom" }],

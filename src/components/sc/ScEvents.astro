@@ -1,0 +1,626 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { href, monthYear } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_events" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("events", {
+	orderBy: { event_date: "desc" },
+	limit: Math.min(Math.max(value.count ?? 7, 1), 24),
+});
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+const link = href(value.link_url);
+---
+
+<section class="ev tone-black" data-tone="dark" id={value.anchor_id || undefined} data-events style={`--n:${entries.length}`}>
+	<div class="ev__sticky">
+		<header class="ev__head sc-container">
+			<h2 class="sc-h2">{value.headline}</h2>
+			<div class="ev__progress" aria-hidden="true"><span></span></div>
+			{
+				link && value.link_label && (
+					<a href={link} class="sc-link">
+						{value.link_label}
+					</a>
+				)
+			}
+		</header>
+		<ol class="ev__track">
+			{
+				entries.map((ev, i) => {
+					const d = monthYear(ev.data.event_date);
+					const count = (ev.data.cover ? 1 : 0) + (ev.data.gallery?.length ?? 0);
+					return (
+						<li class="ev__card">
+							<button type="button" class="ev__open" data-gallery={ev.id} aria-label={`${ev.data.title}: view ${count} photos`}>
+							<figure>
+								<div class="ev__img">
+									{ev.data.cover && <Image image={ev.data.cover} sizes="(max-width: 760px) 80vw, 34vw" alt="" />}
+								</div>
+								<figcaption>
+									<span class="ev__num sc-label">{String(i + 1).padStart(2, "0")}</span>
+									<span class="ev__title">{ev.data.title}</span>
+									{d && (
+										<span class="ev__date">
+											{d.month} {d.year}
+										</span>
+									)}
+								</figcaption>
+								{count > 1 && <span class="ev__count sc-label">{count} photos</span>}
+							</figure>
+							</button>
+							<template data-gallery-for={ev.id} data-title={ev.data.title} data-date={d ? `${d.month} ${d.year}` : ""}>
+								{[ev.data.cover, ...(ev.data.gallery ?? []).map((g) => g.image)].filter(Boolean).map((img) => (
+									<Image image={img!} sizes="90vw" alt="" loading="lazy" />
+								))}
+							</template>
+						</li>
+					);
+				})
+			}
+		</ol>
+	</div>
+</section>
+
+<div class="gv tone-black" hidden role="dialog" aria-modal="true" aria-label="Event photos" data-viewer>
+	<div class="gv__top sc-container">
+		<p class="gv__title"><span data-v-title></span> <span class="gv__date" data-v-date></span></p>
+		<p class="gv__counter sc-label" data-v-counter></p>
+		<button type="button" class="gv__close" data-v-close aria-label="Close photos">Close <span aria-hidden="true">×</span></button>
+	</div>
+	<div class="gv__stage" data-v-stage></div>
+	<button type="button" class="gv__nav gv__nav--prev" data-v-prev aria-label="Previous photo">←</button>
+	<button type="button" class="gv__nav gv__nav--next" data-v-next aria-label="Next photo">→</button>
+	<div class="gv__thumbs" data-v-thumbs></div>
+</div>
+
+<script>
+	// Full-screen photo viewer for an event's cover + gallery.
+	const viewer = document.querySelector<HTMLElement>("[data-viewer]");
+	if (viewer) {
+		const stage = viewer.querySelector<HTMLElement>("[data-v-stage]")!;
+		const thumbs = viewer.querySelector<HTMLElement>("[data-v-thumbs]")!;
+		const counter = viewer.querySelector<HTMLElement>("[data-v-counter]")!;
+		let imgs: HTMLImageElement[] = [];
+		let idx = 0;
+		let opener: HTMLElement | null = null;
+		const show = (i: number) => {
+			idx = (i + imgs.length) % imgs.length;
+			imgs.forEach((im, j) => im.classList.toggle("is-on", j === idx));
+			[...thumbs.children].forEach((t, j) => t.classList.toggle("is-on", j === idx));
+			(thumbs.children[idx] as HTMLElement | undefined)?.scrollIntoView({ inline: "center", block: "nearest" });
+			counter.textContent = `${String(idx + 1).padStart(2, "0")} / ${String(imgs.length).padStart(2, "0")}`;
+		};
+		const open = (id: string, from: HTMLElement) => {
+			const tpl = document.querySelector<HTMLTemplateElement>(`template[data-gallery-for="${CSS.escape(id)}"]`);
+			if (!tpl) return;
+			opener = from;
+			viewer.querySelector("[data-v-title]")!.textContent = tpl.dataset.title || "";
+			viewer.querySelector("[data-v-date]")!.textContent = tpl.dataset.date || "";
+			stage.replaceChildren(tpl.content.cloneNode(true));
+			imgs = [...stage.querySelectorAll("img")];
+			imgs.forEach((im) => (im.loading = "eager"));
+			thumbs.replaceChildren(
+				...imgs.map((im, j) => {
+					const b = document.createElement("button");
+					b.type = "button";
+					b.setAttribute("aria-label", `Photo ${j + 1}`);
+					const t = im.cloneNode() as HTMLImageElement;
+					// a thumbnail keeps the button's fixed shape from the first frame,
+					// whatever size the full photo declares
+					t.removeAttribute("style");
+					t.removeAttribute("width");
+					t.removeAttribute("height");
+					t.removeAttribute("class");
+					t.sizes = "120px";
+					b.appendChild(t);
+					b.addEventListener("click", () => show(j));
+					return b;
+				}),
+			);
+			viewer.hidden = false;
+			document.documentElement.style.overflow = "hidden";
+			requestAnimationFrame(() => viewer.classList.add("is-open"));
+			show(0);
+			viewer.querySelector<HTMLElement>("[data-v-close]")!.focus();
+		};
+		const close = () => {
+			viewer.classList.remove("is-open");
+			document.documentElement.style.overflow = "";
+			setTimeout(() => (viewer.hidden = true), 400);
+			opener?.focus();
+		};
+		document.querySelectorAll<HTMLElement>("[data-gallery]").forEach((b) =>
+			b.addEventListener("click", () => open(b.dataset.gallery!, b)),
+		);
+		viewer.querySelector("[data-v-close]")!.addEventListener("click", close);
+		viewer.querySelector("[data-v-prev]")!.addEventListener("click", () => show(idx - 1));
+		viewer.querySelector("[data-v-next]")!.addEventListener("click", () => show(idx + 1));
+		document.addEventListener("keydown", (e) => {
+			if (viewer.hidden) return;
+			if (e.key === "Escape") close();
+			if (e.key === "ArrowRight") show(idx + 1);
+			if (e.key === "ArrowLeft") show(idx - 1);
+		});
+		let sx = 0;
+		stage.addEventListener("touchstart", (e) => (sx = e.touches[0].clientX), { passive: true });
+		stage.addEventListener("touchend", (e) => {
+			const dx = e.changedTouches[0].clientX - sx;
+			if (Math.abs(dx) > 40) show(idx + (dx < 0 ? 1 : -1));
+		});
+		// Allow vertical mouse wheel over the thumbnail bar to scroll thumbnails sideways
+		thumbs.addEventListener(
+			"wheel",
+			(e) => {
+				if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+					thumbs.scrollLeft += e.deltaY;
+					e.preventDefault();
+				}
+			},
+			{ passive: false },
+		);
+	}
+
+	// Vertical scroll, horizontal trackpad swipe, and mouse drag drive the strip sideways while pinned.
+	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+	for (const root of document.querySelectorAll<HTMLElement>("[data-events]")) {
+		const sticky = root.querySelector<HTMLElement>(".ev__sticky")!;
+		const track = root.querySelector<HTMLElement>(".ev__track")!;
+		const bar = root.querySelector<HTMLElement>(".ev__progress span");
+		const wide = matchMedia("(min-width: 761px)");
+		const size = () => {
+			if (!wide.matches || reduce) {
+				root.style.height = "";
+				track.style.transform = "";
+				return;
+			}
+			const extra = Math.max(0, track.scrollWidth - innerWidth);
+			root.style.height = `${innerHeight + extra}px`;
+			root.dataset.extra = String(extra);
+		};
+		const tick = () => {
+			if (!wide.matches || reduce) return;
+			const extra = Number(root.dataset.extra || 0);
+			const r = root.getBoundingClientRect();
+			const p = Math.min(1, Math.max(0, -r.top / Math.max(1, extra)));
+			track.style.transform = `translate3d(${-p * extra}px,0,0)`;
+			if (bar) bar.style.transform = `scaleX(${p})`;
+		};
+		// Horizontal trackpad / mouse-wheel swipe moves the gallery strip sideways
+		sticky.addEventListener(
+			"wheel",
+			(e) => {
+				if (!wide.matches || reduce) return;
+				if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 1) return;
+				const extra = Number(root.dataset.extra || 0);
+				if (extra <= 0) return;
+				const r = root.getBoundingClientRect();
+				const p = -r.top / extra;
+				const canScroll = (e.deltaX > 0 && p < 1) || (e.deltaX < 0 && p > 0);
+				if (canScroll) {
+					e.preventDefault();
+					window.scrollBy({ top: e.deltaX * 1.15, behavior: "instant" });
+				}
+			},
+			{ passive: false },
+		);
+		// Click-and-drag horizontally on the strip with a mouse
+		let dragging = false;
+		let dragged = false;
+		let lastX = 0;
+		track.addEventListener("pointerdown", (e) => {
+			if (!wide.matches || reduce || e.pointerType !== "mouse" || e.button !== 0) return;
+			dragging = true;
+			dragged = false;
+			lastX = e.clientX;
+			track.classList.add("is-dragging");
+		});
+		addEventListener("pointermove", (e) => {
+			if (!dragging) return;
+			const dx = e.clientX - lastX;
+			lastX = e.clientX;
+			if (Math.abs(dx) > 2) dragged = true;
+			if (dragged) window.scrollBy({ top: -dx * 1.25, behavior: "instant" });
+		});
+		const endDrag = () => {
+			if (!dragging) return;
+			dragging = false;
+			track.classList.remove("is-dragging");
+			if (dragged) setTimeout(() => (dragged = false), 60);
+		};
+		addEventListener("pointerup", endDrag);
+		addEventListener("pointercancel", endDrag);
+		track.addEventListener(
+			"click",
+			(e) => {
+				if (dragged) {
+					e.preventDefault();
+					e.stopPropagation();
+				}
+			},
+			true,
+		);
+		let raf = 0;
+		addEventListener("scroll", () => {
+			cancelAnimationFrame(raf);
+			raf = requestAnimationFrame(tick);
+		}, { passive: true });
+		addEventListener("resize", () => {
+			size();
+			tick();
+		});
+		addEventListener("load", () => {
+			size();
+			tick();
+		});
+		size();
+		tick();
+	}
+</script>
+
+<style>
+	.ev {
+		position: relative;
+	}
+
+	.ev__sticky {
+		position: sticky;
+		inset-block-start: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		min-height: 100svh;
+		padding-block: calc(var(--sc-header-h) + 24px) 48px;
+		overflow: hidden;
+	}
+
+	.ev__head {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 32px;
+		margin-block-end: clamp(32px, 4vw, 56px);
+	}
+
+	.ev__progress {
+		height: 1px;
+		background: var(--sc-line-on-dark);
+	}
+
+	.ev__progress span {
+		display: block;
+		height: 100%;
+		background: var(--sc-light-green);
+		transform: scaleX(0);
+		transform-origin: left;
+	}
+
+	.ev__track {
+		display: flex;
+		gap: clamp(16px, 2vw, 28px);
+		width: max-content;
+		padding-inline: max(var(--sc-gutter), (100vw - var(--sc-max)) / 2);
+		list-style: none;
+		will-change: transform;
+		cursor: grab;
+	}
+
+	.ev__track.is-dragging {
+		cursor: grabbing;
+		user-select: none;
+	}
+
+	.ev__track.is-dragging .ev__open {
+		cursor: grabbing;
+	}
+
+	.ev__card {
+		width: clamp(280px, 30vw, 460px);
+	}
+
+	.ev__img {
+		position: relative;
+		aspect-ratio: 4 / 5;
+		overflow: hidden;
+		background: var(--sc-dark-green);
+	}
+
+	.ev__img :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		filter: grayscale(0.85) contrast(1.05);
+		transition:
+			filter 0.6s var(--sc-ease),
+			transform 1.2s var(--sc-ease);
+	}
+
+	.ev__card:hover :global(img) {
+		filter: none;
+		transform: scale(1.05);
+	}
+
+	.ev__open {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		text-align: start;
+		cursor: zoom-in;
+	}
+
+	.ev__open figure {
+		position: relative;
+	}
+
+	.ev__count {
+		position: absolute;
+		inset-block-start: 16px;
+		inset-inline-start: 16px;
+		padding: 8px 12px;
+		background: var(--sc-black);
+		color: var(--sc-white);
+		opacity: 0;
+		transform: translateY(-6px);
+		transition: opacity 0.4s, transform 0.5s var(--sc-ease);
+	}
+
+	.ev__open:hover .ev__count,
+	.ev__open:focus-visible .ev__count {
+		opacity: 1;
+		transform: none;
+	}
+
+	/* ---- Photo viewer ---- */
+	.gv {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: grid;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+		opacity: 0;
+		transition: opacity 0.4s var(--sc-ease);
+	}
+
+	.gv.is-open {
+		opacity: 1;
+	}
+
+	/* display:grid above would otherwise override the hidden attribute
+	   and leave an invisible layer over the whole page */
+	.gv[hidden] {
+		display: none;
+	}
+
+	.gv__top {
+		display: grid;
+		grid-template-columns: 1fr auto auto;
+		align-items: center;
+		gap: 24px;
+		padding-block: 24px;
+	}
+
+	.gv__title {
+		font-size: clamp(18px, 2vw, 26px);
+		font-weight: 500;
+		letter-spacing: -0.02em;
+	}
+
+	.gv__date {
+		color: var(--sc-muted, var(--sc-grey));
+		font-weight: 400;
+		font-size: 0.7em;
+		margin-inline-start: 12px;
+	}
+
+	.gv__counter {
+		color: var(--sc-mid-grey);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.gv__close {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		font-size: 12px;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+
+	.gv__close span {
+		font-size: 22px;
+		letter-spacing: 0;
+	}
+
+	.gv__stage {
+		position: relative;
+		margin-inline: var(--sc-gutter);
+	}
+
+	.gv__stage :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		opacity: 0;
+		transform: scale(0.98);
+		transition:
+			opacity 0.5s var(--sc-ease),
+			transform 0.8s var(--sc-ease);
+	}
+
+	.gv__stage :global(img.is-on) {
+		opacity: 1;
+		transform: none;
+	}
+
+	.gv__nav {
+		position: absolute;
+		inset-block-start: 50%;
+		width: 56px;
+		height: 56px;
+		border: 1px solid var(--sc-line-on-dark);
+		background: var(--sc-black);
+		color: var(--sc-white);
+		font-size: 20px;
+		cursor: pointer;
+		transition: background 0.3s, color 0.3s;
+	}
+
+	.gv__nav:hover {
+		background: var(--sc-white);
+		color: var(--sc-black);
+	}
+
+	.gv__nav--prev {
+		inset-inline-start: 16px;
+	}
+
+	.gv__nav--next {
+		inset-inline-end: 16px;
+	}
+
+	.gv__thumbs {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		min-height: 104px;
+		box-sizing: border-box;
+		gap: 10px;
+		padding: 16px var(--sc-gutter) 24px;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.gv__thumbs::-webkit-scrollbar {
+		display: none;
+	}
+
+	.gv__thumbs :global(button) {
+		flex: 0 0 clamp(60px, 6.5vw, 76px);
+		min-width: 60px;
+		min-height: 60px;
+		width: clamp(60px, 6.5vw, 76px);
+		height: clamp(60px, 6.5vw, 76px);
+		aspect-ratio: 1 / 1;
+		overflow: hidden;
+		background: var(--sc-dark-green-75);
+		padding: 0;
+		border: 0;
+		cursor: pointer;
+		opacity: 0.42;
+		outline: 1px solid transparent;
+		outline-offset: 2px;
+		transition:
+			opacity 0.3s,
+			outline-color 0.3s;
+	}
+
+	/* Safe-center thumbnails when there are fewer than the viewport width,
+	   while keeping the first thumbnail reachable when scrolling overflows */
+	.gv__thumbs :global(button:first-child) {
+		margin-inline-start: auto;
+	}
+
+	.gv__thumbs :global(button:last-child) {
+		margin-inline-end: auto;
+	}
+
+	.gv__thumbs :global(button.is-on) {
+		opacity: 1;
+		outline-color: var(--sc-light-green);
+	}
+
+	.gv__thumbs :global(button:hover) {
+		opacity: 1;
+	}
+
+	.gv__thumbs :global(img) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+	}
+
+	@media (max-width: 760px) {
+		.gv__nav {
+			display: none;
+		}
+
+		.gv__top {
+			grid-template-columns: 1fr auto;
+		}
+
+		.gv__counter {
+			display: none;
+		}
+	}
+
+	.ev__card figcaption {
+		display: grid;
+		grid-template-columns: auto 1fr auto;
+		gap: 16px;
+		align-items: baseline;
+		padding-block-start: 16px;
+		border-block-start: 1px solid var(--sc-line-on-dark);
+		margin-block-start: 16px;
+	}
+
+	.ev__num {
+		color: var(--sc-light-green-75);
+	}
+
+	.ev__title {
+		font-size: 18px;
+	}
+
+	.ev__date {
+		font-size: 13px;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	@media (max-width: 760px) {
+		.ev__sticky {
+			position: static;
+			min-height: 0;
+			padding-block: 96px;
+		}
+
+		.ev__head {
+			grid-template-columns: 1fr auto;
+		}
+
+		.ev__progress {
+			display: none;
+		}
+
+		.ev__track {
+			width: auto;
+			overflow-x: auto;
+			scroll-snap-type: x mandatory;
+			scroll-padding-inline: var(--sc-gutter);
+		}
+
+		.ev__card {
+			flex: 0 0 78vw;
+			scroll-snap-align: start;
+		}
+	}
+</style>

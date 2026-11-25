@@ -1,0 +1,90 @@
+---
+import type { BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { words } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_manifesto" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const w = words(value.text);
+---
+
+<section class="mf tone-dark" data-tone="dark" id={value.anchor_id || undefined} data-manifesto data-glass-stage>
+	<div class="mf__inner sc-container">
+		{value.label && <p class="sc-label sc-label--rule mf__label">{value.label}</p>}
+		<p class="mf__text">
+			<span class="sc-sr-only">{value.text}</span>
+			<span aria-hidden="true">{w.map((word, i) => <span class="mf__w" style={`--i:${i}`}>{word} </span>)}</span>
+		</p>
+	</div>
+</section>
+
+<script>
+	// Words light up one by one as the statement scrolls through the viewport.
+	const blocks = document.querySelectorAll<HTMLElement>("[data-manifesto]");
+	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+	for (const block of blocks) {
+		const ws = [...block.querySelectorAll<HTMLElement>(".mf__w")];
+		if (reduce) {
+			ws.forEach((w) => w.classList.add("is-lit"));
+			continue;
+		}
+		const textEl = block.querySelector<HTMLElement>(".mf__text") ?? block;
+		const tick = () => {
+			const r = textEl.getBoundingClientRect();
+			const vh = innerHeight;
+			// 0 when the top of the text enters at 92% of the viewport, 1 when it reaches 30% from the top.
+			const p = Math.min(1, Math.max(0, (vh * 0.92 - r.top) / Math.max(1, vh * 0.62)));
+			const lit = Math.round(p * ws.length);
+			ws.forEach((w, i) => w.classList.toggle("is-lit", i < lit));
+		};
+		let raf = 0;
+		addEventListener("scroll", () => {
+			cancelAnimationFrame(raf);
+			raf = requestAnimationFrame(tick);
+		}, { passive: true });
+		tick();
+	}
+</script>
+
+<style>
+	/* Label above the statement; the section is about one screen tall and
+	   the statement sits in its middle */
+	.mf {
+		display: grid;
+		align-items: center;
+		min-height: min(100svh, 760px);
+		padding-block: clamp(120px, 11vw, 160px);
+	}
+
+	.mf__inner {
+		display: grid;
+		gap: clamp(24px, 3vw, 40px);
+	}
+
+	.mf__label {
+		color: var(--sc-mid-grey);
+	}
+
+	.mf__text {
+		font-size: clamp(30px, 4.4vw, 68px);
+		font-weight: 300;
+		line-height: 1.14;
+		letter-spacing: -0.025em;
+	}
+
+	.mf__w {
+		color: rgb(255 255 255 / 0.3);
+		transition: color 0.5s var(--sc-ease);
+	}
+
+	.mf__w.is-lit {
+		color: var(--sc-white);
+	}
+
+	html:not(.js) .mf__w {
+		color: var(--sc-white);
+	}
+
+</style>

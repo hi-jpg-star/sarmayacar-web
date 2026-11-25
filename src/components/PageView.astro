@@ -13,7 +13,12 @@ const { page, heading } = Astro.props;
 const title = heading ?? page.data.title;
 const titleEdit = heading === undefined ? page.edit.title : {};
 const blocks = page.data.content ?? [];
-const hasHero = blocks.some((block) => block._type === "marketing_hero");
+// These blocks carry the page's own heading, so no separate title is shown.
+const HEADING_BLOCKS = new Set(["marketing_hero", "sc_hero"]);
+const FIRST_HEADING_BLOCKS = new Set(["sc_intro", "sc_team"]);
+const hasHero =
+	blocks.some((block) => HEADING_BLOCKS.has(block._type)) ||
+	(blocks.length > 0 && FIRST_HEADING_BLOCKS.has(blocks[0]._type));
 ---
 
 {

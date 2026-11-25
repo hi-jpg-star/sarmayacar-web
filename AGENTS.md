@@ -71,6 +71,35 @@ Confident and editorial: large clean sans-serif headlines, lots of white space, 
 
 Sarmayacar's mission is to bring international investment practice to Pakistan through a team that understands both local and international business. Its purpose is to enable daring entrepreneurs to build the iconic companies of the future. Core values: **conviction-led, trusted partners, beyond capital returns, here for good.** Tagline in use: *Adding value beyond capital.* Write plainly and specifically, as a trusted partner — no hype, no buzzwords.
 
+## Sarmayacar content and sections
+
+**Collections** (edit in the admin or through MCP; never hard-code this content):
+
+| Collection | What it holds | Shown by |
+|---|---|---|
+| `companies` (Portfolio) | Ventures and Operator Angel companies; `program`, logos, description, founders, dates; `sector` taxonomy | `sc_portfolio`, `sc_sectors`, `sc_marquee` |
+| `team` | People; unpublish to hide | `sc_team` |
+| `news` | Press, Portfolio news, Newsletter issues (`category`) | `sc_press`, `sc_news_feed` |
+| `events` | Events with cover and gallery | `sc_events`, `sc_news_feed` |
+| `faqs` | Get-funding questions | `sc_faqs` |
+| `milestones` | About-page timeline | `sc_timeline` |
+| `reports` | **Private investor reports. Never render, link or publish these.** | nothing |
+
+**Sarmayacar section types** (`src/components/sc/`), used in the `pages` collection's `content` field. Prefer these over the `marketing_*` template blocks:
+
+| Block | Use |
+|---|---|
+| `sc_hero` | Page header (dark). First block on the home page with a `video` gets the intro animation and full-screen video. |
+| `sc_manifesto` | Statement that lights up word by word on scroll |
+| `sc_numbers` | Giant counting figures (`value` short, e.g. `$25m`) |
+| `sc_sectors` | Sector list + logos, from the `sector` taxonomy |
+| `sc_marquee` | Ventures logo band |
+| `sc_press` / `sc_events` | Latest press rows / sideways-scrolling events |
+| `sc_portfolio` / `sc_team` / `sc_news_feed` | Full collection pages with pop-ups and tabs |
+| `sc_values`, `sc_timeline`, `sc_text`, `sc_image_card`, `sc_intro`, `sc_faqs`, `sc_statement` | Supporting sections |
+
+Every section sets a tone (`tone-light`, `tone-dark`, `tone-black`) and a matching `data-tone` attribute so the header switches colour. Shared styles live in `src/styles/sarmayacar.css`; motion respects `prefers-reduced-motion`.
+
 ---
 
 # Template reference (EmDash marketing template)

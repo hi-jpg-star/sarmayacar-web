@@ -1,0 +1,388 @@
+---
+/**
+ * Sarmayacar header: logo, "Get funding" link and a full-screen menu.
+ * The header switches between light and dark versions depending on the
+ * tone of the section underneath it (see the script below).
+ */
+import logoDark from "../assets/brand/logo-dark.svg?url";
+import logoLight from "../assets/brand/logo-light.svg?url";
+
+interface MenuItem {
+	label: string;
+	url: string;
+	target?: string | null;
+	cssClasses?: string | null;
+}
+
+interface Props {
+	items: MenuItem[];
+	contact: MenuItem[];
+	siteTitle: string;
+	isLoggedIn: boolean;
+}
+
+const { items, contact, siteTitle, isLoggedIn } = Astro.props;
+const isButton = (item: MenuItem) => item.cssClasses?.split(/\s+/).includes("button") ?? false;
+const cta = items.find(isButton);
+const links = items.filter((item) => !isButton(item));
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+---
+
+<header class="sh" data-tone="dark">
+	<div class="sh__bar sc-container">
+		<a href="/" class="sh__logo" aria-label={`${siteTitle} home`}>
+			<img src={logoLight} alt="" width="160" height="32" class="sh__logo-img sh__logo-img--light" />
+			<img src={logoDark} alt="" width="160" height="32" class="sh__logo-img sh__logo-img--dark" />
+		</a>
+		<div class="sh__actions">
+			{isLoggedIn && <a href="/_emdash/admin" class="sh__text-link">Admin</a>}
+			{
+				cta && (
+					<a href={cta.url} class="sh__text-link sh__cta">
+						{cta.label}
+					</a>
+				)
+			}
+			<button type="button" class="sh__menu-btn" aria-expanded="false" aria-controls="site-menu">
+				<span class="sh__menu-word" data-open="Menu" data-close="Close">Menu</span>
+				<span class="sh__burger" aria-hidden="true"><i></i><i></i></span>
+			</button>
+		</div>
+	</div>
+
+	<div id="site-menu" class="sm tone-dark sc-columns" hidden>
+		<div class="sm__inner sc-container">
+			<nav class="sm__nav" aria-label="Main">
+				<ol>
+					{
+						[...links, ...(cta ? [cta] : [])].map((item, i) => (
+							<li style={`--i:${i}`}>
+								<a
+									href={item.url}
+									target={item.target || undefined}
+									aria-current={path === item.url ? "page" : undefined}
+								>
+									<span class="sm__num">{String(i + 1).padStart(2, "0")}</span>
+									<span class="sm__word">{item.label}</span>
+								</a>
+							</li>
+						))
+					}
+				</ol>
+			</nav>
+			{
+				contact.length > 0 && (
+					<div class="sm__contact">
+						<p class="sc-label sc-label--rule">Contact</p>
+						<ul>
+							{contact.map((item) => (
+								<li>
+									<a href={item.url} target={item.url.startsWith("http") ? "_blank" : undefined} rel="noopener">
+										{item.label}
+									</a>
+								</li>
+							))}
+						</ul>
+					</div>
+				)
+			}
+		</div>
+	</div>
+</header>
+
+<script>
+	const header = document.querySelector<HTMLElement>(".sh");
+	const btn = header?.querySelector<HTMLButtonElement>(".sh__menu-btn");
+	const menu = header?.querySelector<HTMLElement>(".sm");
+	const word = header?.querySelector<HTMLElement>(".sh__menu-word");
+
+	if (header && btn && menu && word) {
+		const setOpen = (open: boolean) => {
+			btn.setAttribute("aria-expanded", String(open));
+			word.textContent = open ? word.dataset.close! : word.dataset.open!;
+			header.classList.toggle("is-open", open);
+			document.documentElement.classList.toggle("menu-open", open);
+			if (open) {
+				menu.hidden = false;
+				requestAnimationFrame(() => menu.classList.add("is-visible"));
+			} else {
+				menu.classList.remove("is-visible");
+				setTimeout(() => {
+					if (!menu.classList.contains("is-visible")) menu.hidden = true;
+				}, 700);
+			}
+		};
+		btn.addEventListener("click", () => setOpen(btn.getAttribute("aria-expanded") !== "true"));
+		menu.addEventListener("click", (e) => {
+			if (e.target instanceof Element && e.target.closest("a")) setOpen(false);
+		});
+		document.addEventListener("keydown", (e) => {
+			if (e.key === "Escape" && btn.getAttribute("aria-expanded") === "true") {
+				setOpen(false);
+				btn.focus();
+			}
+		});
+
+		// Light or dark header: read the tone of the section under the header's centre line.
+		const update = () => {
+			const y = 38;
+			let tone = "light";
+			for (const el of document.querySelectorAll<HTMLElement>("main [data-tone]")) {
+				const r = el.getBoundingClientRect();
+				if (r.top <= y && r.bottom > y) tone = el.dataset.tone || "light";
+			}
+			// past the end of the page: the footer (dark) is showing underneath
+			const main = document.getElementById("main");
+			if (main && main.getBoundingClientRect().bottom <= y) tone = "dark";
+			header.dataset.tone = tone;
+			header.classList.toggle("is-scrolled", window.scrollY > 40);
+		};
+		// Cheap enough to run on every scroll event; no animation-frame gating,
+		// so the header can never get stuck if a frame is skipped.
+		window.addEventListener("scroll", update, { passive: true });
+		window.addEventListener("resize", update);
+		update();
+	}
+</script>
+
+<style>
+	.sh {
+		position: fixed;
+		inset-block-start: 0;
+		inset-inline: 0;
+		z-index: 50;
+		color: var(--sc-white);
+		transition: color 0.4s var(--sc-ease);
+	}
+
+	.sh[data-tone="light"]:not(.is-open) {
+		color: var(--sc-black);
+	}
+
+	.sh__bar {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		height: var(--sc-header-h);
+	}
+
+	.sh__bar::before {
+		content: "";
+		position: absolute;
+		inset-block: 0;
+		inset-inline: calc(50% - 50vw);
+		z-index: -1;
+		background: var(--sc-white);
+		opacity: 0;
+		transform: translateY(-100%);
+		transition:
+			transform 0.5s var(--sc-ease),
+			opacity 0.5s var(--sc-ease);
+		border-block-end: 1px solid var(--sc-line);
+	}
+
+	.sh.is-scrolled[data-tone="light"]:not(.is-open) .sh__bar::before {
+		opacity: 1;
+		transform: none;
+	}
+
+	.sh__logo {
+		position: relative;
+		display: block;
+		/* Brand manual 1.2: at least 150px wide on desktop */
+		width: 160px;
+	}
+
+	.sh__logo-img {
+		width: 100%;
+		height: auto;
+		transition: opacity 0.4s var(--sc-ease);
+	}
+
+	.sh__logo-img--dark {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+	}
+
+	.sh[data-tone="light"]:not(.is-open) .sh__logo-img--dark {
+		opacity: 1;
+	}
+
+	.sh[data-tone="light"]:not(.is-open) .sh__logo-img--light {
+		opacity: 0;
+	}
+
+	.sh__actions {
+		display: flex;
+		align-items: center;
+		gap: clamp(16px, 3vw, 40px);
+	}
+
+	.sh__text-link {
+		font-size: 12px;
+		font-weight: 500;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		background: linear-gradient(currentColor, currentColor) 0 100% / 0% 1px no-repeat;
+		padding-block: 6px;
+		transition: background-size 0.5s var(--sc-ease);
+	}
+
+	.sh__text-link:hover {
+		background-size: 100% 1px;
+	}
+
+	.sh__menu-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 14px;
+		padding: 10px 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		cursor: pointer;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+	}
+
+	.sh__burger {
+		position: relative;
+		width: 28px;
+		height: 10px;
+	}
+
+	.sh__burger i {
+		position: absolute;
+		inset-inline: 0;
+		height: 1px;
+		background: currentColor;
+		transition: transform 0.6s var(--sc-ease);
+	}
+
+	.sh__burger i:first-child {
+		top: 0;
+	}
+
+	.sh__burger i:last-child {
+		bottom: 0;
+	}
+
+	.sh.is-open .sh__burger i:first-child {
+		transform: translateY(4.5px) rotate(45deg);
+	}
+
+	.sh.is-open .sh__burger i:last-child {
+		transform: translateY(-4.5px) rotate(-45deg);
+	}
+
+	/* ---- Full-screen menu ---- */
+
+	.sm {
+		position: fixed;
+		inset: 0;
+		z-index: 1;
+		display: flex;
+		align-items: flex-end;
+		clip-path: inset(0 0 100% 0);
+		transition: clip-path 0.8s var(--sc-ease-in-out);
+	}
+
+	.sm.is-visible {
+		clip-path: inset(0 0 0 0);
+	}
+
+	.sm__inner {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+		align-items: end;
+		gap: 48px;
+		padding-block: calc(var(--sc-header-h) + 40px) clamp(40px, 6vw, 80px);
+	}
+
+	.sm__nav ol {
+		list-style: none;
+	}
+
+	.sm__nav li {
+		overflow: hidden;
+		border-block-start: 1px solid var(--sc-line-on-dark);
+	}
+
+	.sm__nav a {
+		display: flex;
+		align-items: baseline;
+		gap: clamp(16px, 2vw, 32px);
+		padding-block: clamp(8px, 1.2vw, 16px);
+		transform: translateY(100%);
+		transition:
+			transform 0.9s var(--sc-ease),
+			color 0.3s;
+		transition-delay: calc(var(--i) * 60ms + 200ms);
+	}
+
+	.sm.is-visible .sm__nav a {
+		transform: none;
+	}
+
+	.sm__num {
+		font-size: 12px;
+		letter-spacing: 0.18em;
+		color: var(--sc-light-green-75);
+	}
+
+	.sm__word {
+		font-size: clamp(40px, 6.4vw, 96px);
+		font-weight: 300;
+		line-height: 1;
+		letter-spacing: -0.035em;
+		transition: transform 0.6s var(--sc-ease);
+	}
+
+	.sm__nav a:hover .sm__word,
+	.sm__nav a[aria-current="page"] .sm__word {
+		transform: translateX(16px);
+		color: var(--sc-light-green-75);
+	}
+
+	.sm__contact ul {
+		list-style: none;
+		margin-block-start: 20px;
+		display: grid;
+		gap: 10px;
+		font-size: 15px;
+		color: var(--sc-mid-grey);
+	}
+
+	.sm__contact a,
+	.sm__nav a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.sm__contact a:hover {
+		color: var(--sc-white);
+	}
+
+	@media (max-width: 800px) {
+		.sh__cta {
+			display: none;
+		}
+
+		.sm__inner {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.sh__logo {
+			/* Brand manual 1.2 sets 200px on mobile; keep it unless the screen is tiny */
+			width: min(200px, 52vw);
+		}
+	}
+</style>

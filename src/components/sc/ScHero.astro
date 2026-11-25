@@ -1,0 +1,431 @@
+---
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { fileUrl, href, isExternal, words } from "../../utils/sc";
+import GlassInsignia from "./GlassInsignia.astro";
+import insignia from "../../assets/brand/insignia.svg?url";
+
+type Block = Extract<PageContentBlock, { _type: "sc_hero" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value, index } = Astro.props;
+const { headline, eyebrow, subheadline, cta_label, cta_url, video, image, anchor_id } = value;
+const layout = (value as { layout?: string | null }).layout;
+const isHome = layout === "home" && index === 0;
+const videoSrc = isHome ? undefined : fileUrl(video as never, Astro.locals as never);
+const cta = cta_label ? href(cta_url) : undefined;
+const w = words(headline);
+---
+
+{isHome && <GlassInsignia />}
+
+{
+	isHome && (
+		<div class="intro tone-dark" aria-hidden="true">
+			<img src={insignia} alt="" class="intro__mark" width="56" height="56" />
+			<p class="intro__word sc-label">Adding value beyond capital</p>
+		</div>
+	)
+}
+
+<section
+	class:list={["hero tone-dark", { "hero--home": isHome }]}
+	data-tone="dark"
+	data-glass-stage={isHome ? "" : undefined}
+	id={anchor_id || undefined}
+>
+	<div class="hero__head sc-container">
+		{!isHome && eyebrow && <p class="sc-label sc-label--rule hero__eyebrow" data-reveal>{eyebrow}</p>}
+		{
+			isHome ? (
+				<h1 class="sc-display hero__title" aria-label={headline}>
+					{w.map((word, i) => (
+						<>
+							{i > 0 && " "}
+							<span class="hero__row" aria-hidden="true">{word}</span>
+						</>
+					))}
+				</h1>
+			) : (
+		<h1 class="sc-display hero__title hero__title--page">{headline}</h1>
+			)
+		}
+		{
+			!isHome && (subheadline || cta) && (
+				<div class="hero__aside">
+					{subheadline && <p class="sc-lead hero__sub">{subheadline}</p>}
+					{cta && (
+						<a href={cta} class="sc-btn" target={isExternal(cta) ? "_blank" : undefined} rel="noopener">
+							{cta_label}
+							<span class="sc-btn__arrow" />
+						</a>
+					)}
+				</div>
+			)
+		}
+	</div>
+
+	{
+		!isHome && (videoSrc || image) && (
+			<div class="hero__media" data-hero-media>
+				<div class="hero__frame">
+					{videoSrc ? (
+						<video src={videoSrc} autoplay muted loop playsinline preload="metadata" aria-hidden="true" />
+					) : (
+						image && <Image image={image} sizes="100vw" loading={index === 0 ? "eager" : "lazy"} />
+					)}
+				</div>
+			</div>
+		)
+	}
+</section>
+
+<script>
+	// Loader on the home page: plays on visit/reload, skipped on back/forward or reduced motion.
+	const intro = document.querySelector<HTMLElement>(".intro");
+	if (intro) {
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+		const isBack = nav?.type === "back_forward";
+		if (isBack || reduce) {
+			intro.remove();
+		} else {
+			document.documentElement.classList.add("intro-running");
+			setTimeout(() => intro.classList.add("is-done"), 1250);
+			setTimeout(() => {
+				intro.remove();
+				document.documentElement.classList.remove("intro-running");
+			}, 2300);
+		}
+	}
+	// Headline words rise in on load.
+	requestAnimationFrame(() => {
+		document.querySelectorAll(".hero__title").forEach((t) => t.classList.add("is-in"));
+	});
+
+	// Fit each word of the home hero headline to the full width of the page.
+	const homeTitle = document.querySelector<HTMLElement>(".hero--home .hero__title");
+	if (homeTitle) {
+		const rows = Array.from(homeTitle.querySelectorAll<HTMLElement>(".hero__row"));
+		const fitRows = () => {
+			const targetW = homeTitle.clientWidth;
+			if (!targetW || !rows.length) return;
+			for (const row of rows) {
+				row.style.fontSize = "100px";
+				const w = row.getBoundingClientRect().width;
+				if (w > 0) row.style.fontSize = `${(100 * targetW) / w}px`;
+			}
+			// Keep the 3 stacked lines comfortably within the viewport height
+			const maxH = Math.max(240, innerHeight - 120);
+			const totalH = homeTitle.getBoundingClientRect().height;
+			if (totalH > maxH) {
+				const k = maxH / totalH;
+				for (const row of rows) {
+					row.style.fontSize = `${parseFloat(row.style.fontSize) * k}px`;
+				}
+			}
+			dispatchEvent(new Event("sc-glass-repaint"));
+		};
+		fitRows();
+		document.fonts?.ready.then(fitRows);
+		addEventListener("resize", fitRows);
+
+		// Smooth proximity-based font weight gradation across each hero line on pointer move.
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const heroSection = homeTitle.closest<HTMLElement>(".hero--home");
+		if (!reduce && heroSection && rows.length) {
+			const current = rows.map(() => 0);
+			const target = rows.map(() => 0);
+			let raf = 0;
+
+			const step = () => {
+				raf = 0;
+				let moving = false;
+				for (let i = 0; i < rows.length; i++) {
+					const diff = target[i] - current[i];
+					if (Math.abs(diff) > 0.002) {
+						current[i] += diff * 0.14;
+						moving = true;
+					} else {
+						current[i] = target[i];
+					}
+					rows[i].style.setProperty("--w", current[i].toFixed(4));
+				}
+				if (moving) raf = requestAnimationFrame(step);
+			};
+
+			const kick = () => {
+				if (!raf) raf = requestAnimationFrame(step);
+			};
+
+			heroSection.addEventListener(
+				"pointermove",
+				(e) => {
+					const rects = rows.map((r) => r.getBoundingClientRect());
+					const centers = rects.map((r) => r.top + r.height * 0.5);
+					// Radius = distance between adjacent row centers so when pointer is centered
+					// on one line, its neighbors stay at default weight; moving toward a neighbor
+					// smoothly blends thickness across both lines.
+					const spacing =
+						centers.length > 1
+							? Math.abs(centers[1] - centers[0])
+							: rects[0]?.height || 160;
+					const radius = Math.max(1, spacing);
+					for (let i = 0; i < rows.length; i++) {
+						const d = Math.min(1, Math.abs(e.clientY - centers[i]) / radius);
+						target[i] = 0.5 * (1 + Math.cos(Math.PI * d));
+					}
+					kick();
+				},
+				{ passive: true },
+			);
+
+			heroSection.addEventListener("pointerleave", () => {
+				for (let i = 0; i < target.length; i++) target[i] = 0;
+				kick();
+			});
+		}
+	}
+
+	// Media frame widens to full bleed as it scrolls up (standard pages).
+	const frames = document.querySelectorAll<HTMLElement>("[data-hero-media]");
+	if (frames.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		const tick = () => {
+			const vh = innerHeight;
+			for (const el of frames) {
+				const r = el.getBoundingClientRect();
+				const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.9)));
+				el.style.setProperty("--p", p.toFixed(3));
+			}
+		};
+		addEventListener("scroll", tick, { passive: true });
+		addEventListener("resize", tick);
+		tick();
+	}
+
+</script>
+
+<style>
+	/* ---- Loader (home) ---- */
+	.intro {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: grid;
+		place-items: center;
+		align-content: center;
+		gap: 28px;
+		clip-path: inset(0 0 0 0);
+		transition: clip-path 1s var(--sc-ease-in-out);
+	}
+
+	.intro.is-done {
+		clip-path: inset(0 0 100% 0);
+	}
+
+	.intro__mark {
+		width: 56px;
+		height: 56px;
+		opacity: 0;
+		animation: intro-fade 0.9s var(--sc-ease) 0.15s forwards;
+	}
+
+	.intro__word {
+		color: var(--sc-mid-grey);
+		opacity: 0;
+		animation: intro-fade 0.9s var(--sc-ease) 0.35s forwards;
+	}
+
+	@keyframes intro-fade {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.intro {
+			display: none;
+		}
+	}
+
+	.hero {
+		position: relative;
+		padding-block: calc(var(--sc-header-h) + clamp(72px, 10vw, 150px)) clamp(64px, 8vw, 120px);
+		overflow: hidden;
+	}
+
+	/* Home: transparent so the glass scene shows; full screen; one centred,
+	   static statement with the glass floating over it */
+	.hero--home {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		min-height: 100svh;
+		padding-block: calc(var(--sc-header-h) + 12px) clamp(24px, 4vw, 48px);
+		overflow: visible;
+	}
+
+	.hero__head {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: clamp(28px, 4vw, 48px);
+	}
+
+	.hero__title {
+		max-width: 14ch;
+	}
+
+	/* Inner pages: a large, static Light headline, left aligned */
+	.hero__title--page {
+		max-width: 15ch;
+		font-size: clamp(48px, 8.6vw, 144px);
+		line-height: 1;
+		animation: hero-in 1.2s var(--sc-ease) both;
+	}
+
+	@keyframes hero-in {
+		from {
+			opacity: 0.001;
+			transform: translateY(0.12em);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.hero__title--page {
+			animation: none;
+		}
+	}
+
+	.hero--home .hero__head {
+		justify-items: center;
+		text-align: center;
+		max-width: none;
+		width: 100%;
+		padding-inline: clamp(12px, 2vw, 32px);
+	}
+
+	.hero--home .hero__title {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		line-height: 0.88;
+		letter-spacing: -0.04em;
+		text-transform: uppercase;
+		max-width: none;
+		width: 100%;
+	}
+
+	.hero--home .hero__row {
+		display: inline-block;
+		white-space: nowrap;
+		paint-order: stroke fill;
+		-webkit-text-stroke-color: currentColor;
+		-webkit-text-stroke-width: calc(var(--w, 0) * 0.052em);
+	}
+
+	.hero--home .hero__aside {
+		border: 0;
+		padding: 0;
+		flex-direction: column;
+		align-items: center;
+		max-width: 620px;
+	}
+
+	.hero__aside {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 32px;
+		padding-block-start: clamp(16px, 3vw, 40px);
+		border-block-start: 1px solid var(--sc-line-on-dark);
+	}
+
+	.hero__sub {
+		color: var(--sc-mid-grey);
+	}
+
+	.hero__media {
+		--p: 0;
+		margin-block-start: clamp(56px, 7vw, 104px);
+	}
+
+	.hero__frame {
+		position: relative;
+		aspect-ratio: 16 / 8;
+		overflow: hidden;
+		margin-inline: auto;
+		width: calc(100% - (1 - var(--p)) * (var(--sc-gutter) * 2 + max(0px, (100vw - var(--sc-max)))));
+		max-height: 92svh;
+	}
+
+	.hero__frame video,
+	.hero__frame :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transform: scale(calc(1.12 - var(--p) * 0.12));
+	}
+
+	.hero__scroll {
+		position: absolute;
+		/* physical sides: in vertical writing mode "inline" means top/bottom */
+		right: var(--sc-gutter);
+		bottom: clamp(40px, 5vw, 72px);
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		color: var(--sc-mid-grey);
+		writing-mode: vertical-rl;
+	}
+
+	.hero__scroll span {
+		position: relative;
+		width: 1px;
+		height: 56px;
+		overflow: hidden;
+		background: var(--sc-line-on-dark);
+	}
+
+	.hero__scroll span::after {
+		content: "";
+		position: absolute;
+		inset-inline: 0;
+		height: 40%;
+		background: var(--sc-light-green);
+		animation: scroll-cue 2.2s var(--sc-ease-in-out) infinite;
+	}
+
+	@keyframes scroll-cue {
+		from {
+			transform: translateY(-100%);
+		}
+		to {
+			transform: translateY(250%);
+		}
+	}
+
+	@media (max-width: 860px) {
+		.hero--home .hero__head {
+			grid-template-columns: 1fr;
+		}
+
+		.hero__scroll {
+			display: none;
+		}
+	}
+
+	@media (max-width: 720px) {
+		.hero__frame {
+			aspect-ratio: 4 / 5;
+		}
+	}
+
+</style>

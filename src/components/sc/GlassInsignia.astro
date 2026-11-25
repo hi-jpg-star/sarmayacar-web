@@ -1,0 +1,556 @@
+---
+/**
+ * Frosted-glass 3D Sarmayacar insignia (three.js), fixed behind the top of the
+ * home page. Its two interlocking parts float, follow the pointer slightly,
+ * and separate and leave the frame as the visitor scrolls.
+ *
+ * The canvas is transparent and sits in front of the page (pointer-events
+ * off). The glass refracts a painted copy of the text behind it, with a
+ * slight colour split at the edges, so it reads as thick, clear glass.
+ * Without WebGL or with reduced motion, a still insignia image is shown.
+ */
+import insigniaRaw from "../../assets/brand/insignia.svg?raw";
+import insigniaUrl from "../../assets/brand/insignia.svg?url";
+---
+
+<div class="glass" aria-hidden="true" data-glass>
+	<canvas class="glass__canvas"></canvas>
+	<img class="glass__fallback" src={insigniaUrl} alt="" width="280" height="280" />
+	<template data-svg set:html={insigniaRaw} />
+</div>
+
+<script>
+	import type { Group as GroupT } from "three";
+	const root = document.querySelector<HTMLElement>("[data-glass]");
+	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+	function webglOk() {
+		try {
+			const c = document.createElement("canvas");
+			return !!(c.getContext("webgl2") || c.getContext("webgl"));
+		} catch {
+			return false;
+		}
+	}
+
+	// Software WebGL (no graphics card: some low-end devices, headless browsers)
+	// is far too slow for this scene; those visitors get the still insignia.
+	function hardwareGl() {
+		try {
+			const gl = document.createElement("canvas").getContext("webgl");
+			const info = gl?.getExtension("WEBGL_debug_renderer_info");
+			const name = info ? String(gl!.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+			return !/swiftshader|llvmpipe|software|basic render/i.test(name);
+		} catch {
+			return false;
+		}
+	}
+
+	const start = async () => {
+		if (!root || reduce || !webglOk() || !hardwareGl()) return;
+		const {
+			Color,
+			ExtrudeGeometry,
+			Group,
+			Mesh,
+			ShaderMaterial,
+			PerspectiveCamera,
+			Scene,
+			SRGBColorSpace,
+			WebGLRenderer,
+			WebGLRenderTarget,
+			Box3,
+			Vector2,
+			Vector3,
+			CanvasTexture,
+			LinearFilter,
+			FrontSide,
+			BackSide,
+			HalfFloatType,
+			UnsignedByteType,
+		} = await import("three");
+		const { SVGLoader } = await import("three/examples/jsm/loaders/SVGLoader.js");
+		const { mergeVertices } = await import("three/examples/jsm/utils/BufferGeometryUtils.js");
+
+		const css = getComputedStyle(document.documentElement);
+		const cssColor = (name: string) => css.getPropertyValue(name).trim();
+		const darkGreen = new Color(cssColor("--sc-dark-green"));
+		// The shader works in display (sRGB) values, so pass the brand colours raw.
+		const raw = (name: string) => {
+			const c = new Color(cssColor(name));
+			const out = { r: 0, g: 0, b: 0 };
+			c.getRGB(out, SRGBColorSpace);
+			return new Vector3(out.r, out.g, out.b);
+		};
+
+		const canvas = root.querySelector<HTMLCanvasElement>("canvas")!;
+		const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+		const mobile = matchMedia("(max-width: 760px)").matches;
+		renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.75));
+		renderer.outputColorSpace = SRGBColorSpace;
+		renderer.setClearColor(darkGreen, 0); // transparent: the page shows through
+
+		const scene = new Scene();
+
+		const camera = new PerspectiveCamera(30, 1, 1, 5000);
+		camera.position.set(0, 0, 1100);
+
+		// Extrude the two insignia shapes from the real logo file.
+		const tpl = root.querySelector<HTMLTemplateElement>("template[data-svg]")!;
+		const svg = new SVGLoader().parse(tpl.innerHTML);
+		// ---- What is behind the glass ----------------------------------------
+		// The glass can only bend what WebGL can see, so the visible text of the
+		// stage sections (hero, manifesto) is painted into an offscreen canvas at
+		// its exact on-screen position. The page itself is never replaced: the
+		// glass shows a bent, colour-split copy of it, like real thick glass.
+		const bg = document.createElement("canvas");
+		const ctx = bg.getContext("2d")!;
+		const bgTex = new CanvasTexture(bg);
+		bgTex.minFilter = LinearFilter;
+		bgTex.magFilter = LinearFilter;
+		bgTex.generateMipmaps = false;
+		const pageBg = cssColor("--sc-dark-green");
+
+		type Word = { node: Text; start: number; end: number; text: string; el: HTMLElement; stop: HTMLElement };
+		let wordList: Word[] = [];
+		const collect = () => {
+			wordList = [];
+			document.querySelectorAll<HTMLElement>("[data-glass-stage]").forEach((stage) => {
+				const walker = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
+				let n: Node | null;
+				while ((n = walker.nextNode())) {
+					const node = n as Text;
+					const el = node.parentElement;
+					if (!el || el.closest(".sc-sr-only, .intro, template, script, style")) continue;
+					for (const m of node.data.matchAll(/\S+/g)) {
+						wordList.push({ node, start: m.index!, end: m.index! + m[0].length, text: m[0], el, stop: stage });
+					}
+				}
+			});
+		};
+		const range = document.createRange();
+		const opacityOf = (el: HTMLElement, stop: HTMLElement) => {
+			let o = 1;
+			for (let e: HTMLElement | null = el; e && e !== stop.parentElement; e = e.parentElement) {
+				o *= parseFloat(getComputedStyle(e).opacity || "1");
+				if (o <= 0.01) break;
+			}
+			return o;
+		};
+		const paint = () => {
+			const vw = innerWidth, vh = innerHeight;
+			const dpr = Math.min(devicePixelRatio, 2);
+			const pw = Math.round(vw * dpr), ph = Math.round(vh * dpr);
+			if (bg.width !== pw || bg.height !== ph) {
+				bg.width = pw;
+				bg.height = ph;
+			}
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+			ctx.globalAlpha = 1;
+			// Clear to transparent so scrolling past the dark stage never shows a green fill
+			ctx.clearRect(0, 0, vw, vh);
+			// Paint each stage section's actual background only within its on-screen bounds
+			document.querySelectorAll<HTMLElement>("[data-glass-stage]").forEach((stage) => {
+				const r = stage.getBoundingClientRect();
+				if (r.bottom < 0 || r.top > vh) return;
+				ctx.fillStyle = pageBg;
+				ctx.fillRect(r.left, Math.max(0, r.top), r.width, Math.min(vh, r.bottom) - Math.max(0, r.top));
+			});
+			// solid boxes such as the hero button
+			document.querySelectorAll<HTMLElement>("[data-glass-stage] .sc-btn").forEach((btn) => {
+				const r = btn.getBoundingClientRect();
+				if (r.bottom < 0 || r.top > vh) return;
+				ctx.fillStyle = getComputedStyle(btn).backgroundColor;
+				ctx.fillRect(r.left, r.top, r.width, r.height);
+			});
+			ctx.textBaseline = "alphabetic";
+			let lastEl: HTMLElement | null = null;
+			let style: CSSStyleDeclaration | null = null;
+			let ascent = 0;
+			let strokeW = 0;
+			for (const w of wordList) {
+				range.setStart(w.node, w.start);
+				range.setEnd(w.node, w.end);
+				const r = range.getBoundingClientRect();
+				if (r.bottom < 0 || r.top > vh || r.width === 0) continue;
+				if (w.el !== lastEl) {
+					lastEl = w.el;
+					style = getComputedStyle(w.el);
+					ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+					(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing =
+						style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
+					ctx.fillStyle = style.color;
+					ctx.strokeStyle = style.color;
+					ctx.lineJoin = "round";
+					strokeW = parseFloat(style.webkitTextStrokeWidth || "0") || 0;
+					ctx.lineWidth = strokeW;
+					ctx.globalAlpha = opacityOf(w.el, w.stop);
+					ascent = ctx.measureText("Hg").fontBoundingBoxAscent;
+				}
+				const text = style!.textTransform === "uppercase" ? w.text.toUpperCase() : w.text;
+				if (strokeW > 0.1) ctx.strokeText(text, r.left, r.top + ascent);
+				ctx.fillText(text, r.left, r.top + ascent);
+			}
+			bgTex.needsUpdate = true;
+		};
+		collect();
+
+		// Back-face normal pass (16-bit half-float + MSAA so normals are completely
+		// smooth with zero 8-bit quantization staircasing).
+		const canHalfFloat =
+			renderer.capabilities.isWebGL2 ||
+			renderer.extensions.has("EXT_color_buffer_half_float") ||
+			renderer.extensions.has("OES_texture_half_float");
+		const backTarget = new WebGLRenderTarget(1, 1, {
+			minFilter: LinearFilter,
+			magFilter: LinearFilter,
+			depthBuffer: true,
+			type: canHalfFloat ? HalfFloatType : UnsignedByteType,
+			samples: renderer.capabilities.isWebGL2 ? 4 : 0,
+		});
+		const neutralNormal = new Color(0.5, 0.5, 1.0);
+		const backMaterial = new ShaderMaterial({
+			side: BackSide,
+			vertexShader: `
+				varying vec3 vN;
+				void main() {
+					vN = normalize(normalMatrix * normal);
+					gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+				}`,
+			fragmentShader: `
+				varying vec3 vN;
+				void main() {
+					vec3 n = normalize(vN);
+					gl_FragColor = vec4(n * 0.5 + 0.5, 1.0);
+				}`,
+		});
+
+		const material = new ShaderMaterial({
+			side: FrontSide,
+			transparent: true,
+			uniforms: {
+				uBg: { value: bgTex },
+				uBack: { value: backTarget.texture },
+				uRes: { value: new Vector2(1, 1) },
+				uCentre: { value: new Vector2(0.5, 0.5) },
+				uWhite: { value: raw("--sc-white") },
+				uBlack: { value: raw("--sc-black") },
+			},
+			vertexShader: `
+				varying vec3 vN;
+				varying vec3 vV;
+				void main() {
+					vec4 mv = modelViewMatrix * vec4(position, 1.0);
+					vN = normalize(normalMatrix * normal);
+					vV = normalize(-mv.xyz);
+					gl_Position = projectionMatrix * mv;
+				}`,
+			fragmentShader: `
+				uniform sampler2D uBg;
+				uniform sampler2D uBack;
+				uniform vec2 uRes;
+				uniform vec2 uCentre;
+				uniform vec3 uWhite;
+				uniform vec3 uBlack;
+				varying vec3 vN;
+				varying vec3 vV;
+				void main() {
+					vec3 nFront = normalize(vN);
+					vec2 uv = gl_FragCoord.xy / uRes;
+					vec4 backSample = texture2D(uBack, uv);
+					vec3 nBack = backSample.a > 0.5 ? normalize(backSample.rgb * 2.0 - 1.0) : -nFront;
+
+					// Combine front and back surface normals for thick two-sided optical glass
+					vec3 n = normalize(nFront - nBack * 0.62);
+
+					float facingFront = clamp(dot(nFront, vV), 0.0, 1.0);
+					float facingBack = clamp(dot(-nBack, vV), 0.0, 1.0);
+					float fresFront = pow(1.0 - facingFront, 3.0);
+					float fresBack = pow(1.0 - facingBack, 3.0);
+					float rim = pow(1.0 - facingFront, 5.2);
+
+					// Pronounced organic hand-cast glass ripple + high-IOR refraction
+					vec2 ripple = vec2(
+						sin(uv.y * 42.0 + nFront.x * 6.0) + 0.45 * sin(uv.x * 28.0 - uv.y * 34.0),
+						cos(uv.x * 42.0 + nFront.y * 6.0) + 0.45 * cos(uv.y * 28.0 + uv.x * 34.0)
+					) * 0.0062;
+					vec3 refr = refract(-vV, n, 1.0 / 1.5);
+					vec2 lens = (uCentre - uv) * 0.028;
+					vec2 bend = refr.xy * (0.105 + 0.13 * fresFront) - nBack.xy * 0.04;
+					vec2 off = lens + bend + ripple;
+
+					// Light frosted diffusion + smooth 5-tap spectral chromatic dispersion
+					float disp = 0.018 + 0.055 * max(fresFront, fresBack);
+					vec2 frost = (1.6 + 2.2 * fresFront) / uRes;
+
+					vec4 sR = 0.5 * texture2D(uBg, clamp(uv + off * (1.0 - disp) + vec2(-frost.x, frost.y), 0.0, 1.0))
+					        + 0.5 * texture2D(uBg, clamp(uv + off * (1.0 - disp) + vec2(frost.x, -frost.y), 0.0, 1.0));
+					vec4 sY = texture2D(uBg, clamp(uv + off * (1.0 - disp * 0.5), 0.0, 1.0));
+					vec4 sG = 0.5 * texture2D(uBg, clamp(uv + off + vec2(frost.x, frost.y), 0.0, 1.0))
+					        + 0.5 * texture2D(uBg, clamp(uv + off - vec2(frost.x, frost.y), 0.0, 1.0));
+					vec4 sC = texture2D(uBg, clamp(uv + off * (1.0 + disp * 0.5), 0.0, 1.0));
+					vec4 sB = 0.5 * texture2D(uBg, clamp(uv + off * (1.0 + disp) + vec2(-frost.x, -frost.y), 0.0, 1.0))
+					        + 0.5 * texture2D(uBg, clamp(uv + off * (1.0 + disp) + vec2(frost.x, frost.y), 0.0, 1.0));
+
+					float bgAlpha = clamp((sR.a + sY.a + sG.a + sC.a + sB.a) * 0.2, 0.0, 1.0);
+					vec3 refrCol = vec3(
+						sR.r * 0.55 + sY.r * 0.45,
+						sY.g * 0.25 + sG.g * 0.5 + sC.g * 0.25,
+						sC.b * 0.45 + sB.b * 0.55
+					);
+
+					// Neutral light frosting (no green tint)
+					vec3 col = mix(uWhite * 0.9, refrCol, bgAlpha);
+					col = mix(col, uWhite, 0.055 + fresFront * 0.045);
+
+					// High-contrast dark total-internal-reflection contour lines on both bevels
+					float darkEdge = smoothstep(0.28, 0.85, fresFront) * 0.55 + smoothstep(0.35, 0.9, fresBack) * 0.3;
+					col = mix(col, uBlack, clamp(darkEdge, 0.0, 0.68));
+
+					// Soft prismatic rainbow sheen along the rounded bevel rim
+					vec3 prism = 0.5 + 0.5 * cos(6.2831 * (fresFront * 1.25 + vec3(0.0, 0.33, 0.67)));
+					col += prism * smoothstep(0.35, 0.92, fresFront) * 0.075;
+
+					// Sleek liquid-glass edge highlights & sharp specular glints on rounded bevels
+					vec3 r = reflect(-vV, nFront);
+					float bevelBand = smoothstep(0.14, 0.72, 1.0 - facingFront);
+					float glint1 = pow(max(dot(r, normalize(vec3(-0.32, 0.78, 0.54))), 0.0), 150.0);
+					float glint2 = pow(max(dot(r, normalize(vec3(0.58, -0.48, 0.65))), 0.0), 85.0);
+					float edgeRibbon = pow(max(dot(r, normalize(vec3(-0.18, 0.88, 0.44))), 0.0), 22.0) * bevelBand;
+					float edgeRibbon2 = pow(max(dot(r, normalize(vec3(0.72, 0.42, 0.55))), 0.0), 28.0) * bevelBand;
+					float rimGlow = pow(1.0 - facingFront, 4.2) * 0.75;
+					float specSum = glint1 * 1.65 + glint2 * 0.7 + edgeRibbon * 0.9 + edgeRibbon2 * 0.55 + rimGlow + rim * 0.5;
+					col += uWhite * specSum;
+
+					// Full opacity over the refracted stage; transparent frosted glass over other sections
+					float glassAlpha = clamp(0.16 + darkEdge * 0.45 + fresFront * 0.35 + specSum * 0.5, 0.0, 0.92);
+					float outAlpha = max(bgAlpha, glassAlpha);
+					gl_FragColor = vec4(col, outAlpha);
+				}`,
+		});
+
+		const insignia = new Group();
+		const parts: GroupT[] = [];
+		const meshes: InstanceType<typeof Mesh>[] = [];
+		for (const path of svg.paths) {
+			const part = new Group();
+			for (const shape of SVGLoader.createShapes(path)) {
+				const rawGeo = new ExtrudeGeometry(shape, {
+					depth: 28,
+					bevelEnabled: true,
+					bevelThickness: 11,
+					bevelSize: 5.5,
+					bevelOffset: -2.5,
+					bevelSegments: 24,
+					curveSegments: 12,
+				});
+				// Strip UVs and weld bevel vertices so computeVertexNormals() produces
+				// completely smooth interpolated normals with zero polygonal facets.
+				rawGeo.deleteAttribute("uv");
+				const geo = mergeVertices(rawGeo, 1e-2);
+				geo.computeVertexNormals();
+				rawGeo.dispose();
+				const m = new Mesh(geo, material);
+				meshes.push(m);
+				part.add(m);
+			}
+			parts.push(part);
+			insignia.add(part);
+		}
+		// SVG y points down: flip, then centre the whole mark on the origin.
+		insignia.scale.set(1, -1, 1);
+		const box = new Box3().setFromObject(insignia);
+		const centre = box.getCenter(new Vector3());
+		for (const part of parts) part.children.forEach((m) => m.position.sub(new Vector3(centre.x, -centre.y, centre.z)));
+		// Each part pivots around its own centre so it can drift and turn independently.
+		const partHome = parts.map((part) => {
+			const b = new Box3().setFromObject(part);
+			const c = b.getCenter(new Vector3());
+			part.children.forEach((m) => m.position.sub(new Vector3(c.x, -c.y, 0)));
+			part.position.set(c.x, -c.y, 0);
+			return part.position.clone();
+		});
+		const holder = new Group();
+		holder.add(insignia);
+		scene.add(holder);
+
+		// Layout
+		let w = 0, h = 0, baseX = 0, baseY = 0, hoverRadius = 150;
+		const resize = () => {
+			w = innerWidth;
+			h = innerHeight;
+			renderer.setSize(w, h, false);
+			const buf = renderer.getDrawingBufferSize(new Vector2());
+			backTarget.setSize(buf.x, buf.y);
+			material.uniforms.uRes.value.copy(buf);
+			collect();
+			camera.aspect = w / h;
+			camera.updateProjectionMatrix();
+			const s = Math.min(w / 1440, h / 900);
+			const scale = (mobile ? 0.52 : 0.68) * Math.max(0.55, s);
+			holder.scale.setScalar(scale);
+			// centred right over the stacked hero headline
+			baseX = 0;
+			baseY = 0;
+			hoverRadius = Math.max(110, 210 * scale);
+		};
+		resize();
+		addEventListener("resize", resize);
+
+		// Scroll progress across the transparent "stage" sections
+		const stageEnd = () => {
+			const els = document.querySelectorAll<HTMLElement>("[data-glass-stage]");
+			const last = els[els.length - 1];
+			return last ? last.getBoundingClientRect().bottom + scrollY : innerHeight * 2;
+		};
+		let end = stageEnd();
+		addEventListener("load", () => (end = stageEnd()));
+		addEventListener("resize", () => (end = stageEnd()));
+
+		let px = 0, py = 0, tx = 0, ty = 0;
+		let pointerActive = false, mx = -9999, my = -9999;
+		addEventListener("pointermove", (e) => {
+			pointerActive = true;
+			mx = e.clientX;
+			my = e.clientY;
+			tx = (e.clientX / innerWidth) * 2 - 1;
+			ty = (e.clientY / innerHeight) * 2 - 1;
+		}, { passive: true });
+		document.addEventListener("pointerleave", () => {
+			pointerActive = false;
+			tx = 0;
+			ty = 0;
+		});
+
+		let visible = true;
+		document.addEventListener("visibilitychange", () => (visible = !document.hidden));
+
+		const t0 = performance.now();
+		let smooth = 0;
+		let hover = 0;
+		const frame = () => {
+			requestAnimationFrame(frame);
+			const y = scrollY;
+			const active = y < end;
+			root.classList.toggle("is-gone", !active);
+			if (!visible || !active) return;
+
+			const t = (performance.now() - t0) / 1000;
+			const p = Math.min(1, Math.max(0, y / Math.max(1, end - innerHeight)));
+			smooth += (p - smooth) * 0.08;
+			px += (tx - px) * 0.08;
+			py += (ty - py) * 0.08;
+
+			// whole mark: float, slow turn, stronger inverted pointer parallax & tilt
+			const moveX = mobile ? 28 : 80;
+			const moveY = mobile ? 22 : 60;
+			holder.position.x = baseX - px * moveX;
+			holder.position.y = baseY + Math.sin(t * 0.6) * 12 + py * moveY - smooth * 120;
+			holder.rotation.x = 0.16 - py * 0.42 + smooth * 0.6;
+			holder.rotation.y = -0.3 + Math.sin(t * 0.25) * 0.12 - px * 0.65 + smooth * 0.9;
+			holder.rotation.z = -0.06 + px * 0.08 + smooth * 0.2;
+
+			// detect pointer hovering over the insignia so its parts separate for legibility
+			const c = holder.position.clone().project(camera);
+			const screenCx = (c.x * 0.5 + 0.5) * w;
+			const screenCy = (0.5 - c.y * 0.5) * h;
+			const hovering = pointerActive && Math.hypot(mx - screenCx, my - screenCy) < hoverRadius;
+			hover += ((hovering ? 1 : 0) - hover) * 0.085;
+
+			// parts: separate on hover or scroll, then fly out of frame in opposite directions
+			const open = Math.min(1, smooth * 1.6);
+			const out = Math.max(0, (smooth - 0.35) / 0.65);
+			const e = out * out * (3 - 2 * out);
+			parts.forEach((part, i) => {
+				const dir = i === 0 ? -1 : 1;
+				const home = partHome[i];
+				part.position.set(
+					home.x + dir * (hover * 145 + open * 70 + e * 900),
+					home.y - dir * (hover * 115 + open * 70 + e * 650),
+					dir * (hover * 70 + open * 60 + e * 300),
+				);
+				part.rotation.set(
+					dir * (hover * 0.14 + e * 1.2),
+					dir * (hover * 0.32 + open * 0.35 + e * 1.4),
+					dir * (hover * 0.1 + e * 0.8),
+				);
+			});
+
+			// repaint what is behind the glass when the page moved or every ~1/4 s
+			const now = performance.now();
+			if (y !== paintedY || now - paintedAt > 250) {
+				paint();
+				paintedY = y;
+				paintedAt = now;
+			}
+			material.uniforms.uCentre.value.set(c.x * 0.5 + 0.5, c.y * 0.5 + 0.5);
+
+			// Pass 1: back-face normals
+			for (const m of meshes) m.material = backMaterial;
+			renderer.setRenderTarget(backTarget);
+			renderer.setClearColor(neutralNormal, 0);
+			renderer.clear();
+			renderer.render(scene, camera);
+
+			// Pass 2: front-face crystal refraction
+			for (const m of meshes) m.material = material;
+			renderer.setRenderTarget(null);
+			renderer.setClearColor(darkGreen, 0);
+			renderer.render(scene, camera);
+		};
+		let paintedY = -1;
+		let paintedAt = 0;
+		addEventListener("sc-glass-repaint", () => {
+			collect();
+			paintedY = -1;
+		});
+		root.classList.add("is-live");
+		requestAnimationFrame(frame);
+	};
+
+	// Load the 3D library only after the page has finished loading and the
+	// browser is idle, so it never delays the first paint or the headline.
+	const later = () =>
+		"requestIdleCallback" in window ? requestIdleCallback(() => start(), { timeout: 2500 }) : setTimeout(start, 600);
+	if (document.readyState === "complete") later();
+	else addEventListener("load", later, { once: true });
+</script>
+
+<style>
+	.glass {
+		position: fixed;
+		inset: 0;
+		z-index: 5; /* over the page content (below the header), never catches clicks */
+		pointer-events: none;
+	}
+
+	.glass__canvas {
+		width: 100%;
+		height: 100%;
+		display: block;
+		opacity: 0;
+		transition: opacity 1.4s var(--sc-ease);
+	}
+
+	.glass.is-live .glass__canvas {
+		opacity: 1;
+	}
+
+	.glass__fallback {
+		position: absolute;
+		inset-block-start: 50%;
+		inset-inline-start: 50%;
+		width: min(24vw, 180px);
+		height: auto;
+		translate: -50% -40%;
+		opacity: 0.35;
+	}
+
+	.glass.is-live .glass__fallback {
+		display: none;
+	}
+
+	.glass.is-gone {
+		visibility: hidden;
+	}
+</style>

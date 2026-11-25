@@ -1,0 +1,129 @@
+---
+import type { BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+
+type Block = Extract<PageContentBlock, { _type: "sc_numbers" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const items = value.items ?? [];
+---
+
+<section class="nb tone-light sc-columns" data-tone="light" id={value.anchor_id || undefined}>
+	<div class="sc-container">
+		{value.label && <p class="sc-label sc-label--rule nb__label" data-reveal>{value.label}</p>}
+		<ol class="nb__list">
+			{
+				items.map((item, i) => (
+					<li class="nb__row" data-reveal style={`--reveal-i:${i}`}>
+						<span class="nb__index sc-label">{String(i + 1).padStart(2, "0")}</span>
+						<span class="nb__value" data-count={item.value}>
+							{item.value}
+						</span>
+						<span class="nb__text">
+							<span class="nb__what">{item.label}</span>
+							{item.note && <span class="nb__note">{item.note}</span>}
+						</span>
+					</li>
+				))
+			}
+		</ol>
+	</div>
+</section>
+
+<script>
+	// Count numeric figures up when they appear: "$25m", "25+", "2016".
+	const els = document.querySelectorAll<HTMLElement>(".nb__value[data-count]");
+	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+	const io = new IntersectionObserver(
+		(entries) => {
+			for (const entry of entries) {
+				if (!entry.isIntersecting) continue;
+				io.unobserve(entry.target);
+				const el = entry.target as HTMLElement;
+				const m = (el.dataset.count || "").match(/^(\D*)(\d[\d,]*)(.*)$/);
+				if (!m || reduce) continue;
+				const target = Number(m[2].replace(/,/g, ""));
+				const from = target > 1900 && target < 2100 ? target - 24 : 0;
+				const start = performance.now();
+				const dur = 1800;
+				const step = (t: number) => {
+					const k = Math.min(1, (t - start) / dur);
+					const e = 1 - Math.pow(1 - k, 4);
+					el.textContent = `${m[1]}${Math.round(from + (target - from) * e)}${m[3]}`;
+					if (k < 1) requestAnimationFrame(step);
+				};
+				requestAnimationFrame(step);
+			}
+		},
+		{ threshold: 0.6 },
+	);
+	els.forEach((el) => io.observe(el));
+</script>
+
+<style>
+	.nb {
+		padding-block: clamp(96px, 12vw, 176px);
+	}
+
+	.nb__label {
+		color: var(--sc-muted, var(--sc-grey));
+		margin-block-end: clamp(32px, 4vw, 56px);
+	}
+
+	.nb__list {
+		list-style: none;
+		border-block-end: 1px solid var(--sc-line);
+	}
+
+	.nb__row {
+		display: grid;
+		grid-template-columns: 80px minmax(0, 1.4fr) minmax(0, 1fr);
+		align-items: end;
+		gap: 24px;
+		padding-block: clamp(20px, 2.4vw, 32px);
+		border-block-start: 1px solid var(--sc-line);
+	}
+
+	.nb__index {
+		color: var(--sc-light-green);
+		align-self: start;
+		padding-block-start: 1.2em;
+	}
+
+	.nb__value {
+		font-size: clamp(64px, 11vw, 184px);
+		font-weight: 300;
+		line-height: 0.85;
+		letter-spacing: -0.05em;
+		font-variant-numeric: tabular-nums;
+		color: var(--sc-dark-green);
+	}
+
+	.nb__text {
+		display: grid;
+		gap: 6px;
+		padding-block-end: 0.6em;
+	}
+
+	.nb__what {
+		font-size: clamp(18px, 1.6vw, 24px);
+		line-height: 1.3;
+	}
+
+	.nb__note {
+		font-size: 14px;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	@media (max-width: 720px) {
+		.nb__row {
+			grid-template-columns: 1fr;
+			gap: 12px;
+		}
+
+		.nb__index {
+			padding: 0;
+		}
+	}
+</style>

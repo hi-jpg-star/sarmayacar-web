@@ -1,0 +1,93 @@
+---
+import type { BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+
+type Block = Extract<PageContentBlock, { _type: "sc_values" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+---
+
+<section class="vl tone-light sc-columns" data-tone="light" id={value.anchor_id || undefined}>
+	<div class="sc-container">
+		<h2 class="sc-h2 vl__title" data-reveal>{value.headline}</h2>
+		<ol class="vl__grid">
+			{
+				(value.items ?? []).map((item, i) => (
+					<li class="vl__item" data-reveal style={`--reveal-i:${i}`}>
+						<h3 class="sc-h3">{item.title}</h3>
+						{item.description && <p class="vl__desc">{item.description}</p>}
+					</li>
+				))
+			}
+		</ol>
+	</div>
+</section>
+
+<style>
+	.vl {
+		padding-block: clamp(96px, 12vw, 160px);
+	}
+
+	.vl__title {
+		margin-block-end: clamp(48px, 6vw, 88px);
+	}
+
+	.vl__grid {
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		border-block-start: 1px solid var(--sc-line);
+	}
+
+	.vl__item {
+		display: grid;
+		align-content: start;
+		gap: 18px;
+		padding: 28px clamp(16px, 2vw, 32px) 40px 0;
+		border-inline-end: 1px solid var(--sc-line);
+		transition: background 0.5s var(--sc-ease);
+	}
+
+	.vl__item + .vl__item {
+		padding-inline-start: clamp(16px, 2vw, 32px);
+	}
+
+	.vl__item:last-child {
+		border-inline-end: 0;
+	}
+
+
+
+	.vl__desc {
+		font-size: 15px;
+		line-height: 1.65;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	@media (max-width: 900px) {
+		.vl__grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.vl__item:nth-child(2) {
+			border-inline-end: 0;
+		}
+
+		.vl__item:nth-child(3) {
+			padding-inline-start: 0;
+		}
+	}
+
+	@media (max-width: 560px) {
+		.vl__grid {
+			grid-template-columns: 1fr;
+		}
+
+		.vl__item {
+			border-inline-end: 0;
+			border-block-end: 1px solid var(--sc-line);
+			padding-inline: 0 !important;
+		}
+	}
+</style>

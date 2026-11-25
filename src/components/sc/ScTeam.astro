@@ -1,0 +1,183 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { byOrder, words } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_team" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value, index } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("team", { limit: 100 });
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+const people = [...entries].sort(byOrder);
+const Tag = index === 0 ? "h1" : "h2";
+---
+
+<section class:list={["tm tone-light", { "tm--first": index === 0 }]} data-tone="light" id={value.anchor_id || undefined} data-team>
+	<div class="sc-container">
+		<div class="tm__intro">
+			{value.eyebrow && <p class="sc-label sc-label--rule tm__eyebrow" data-reveal>{value.eyebrow}</p>}
+			<Tag class="tm__text" data-reveal-group aria-label={value.intro}>
+				{
+					words(value.intro).map((w, i) => (
+						<span class="sc-line tm__w" style={`--line-i:${Math.min(i, 30)}`} aria-hidden="true">
+							<span>{w}</span>
+						</span>
+					))
+				}
+			</Tag>
+		</div>
+
+		<ul class="tm__grid">
+			{
+				people.map((p, i) => (
+					<li data-reveal style={`--reveal-i:${i % 4}`}>
+						<a href={`/team/${p.id}`} class="tm__card">
+							<span class="tm__photo">{p.data.photo && <Image image={p.data.photo} sizes="(max-width: 700px) 50vw, 25vw" alt="" />}</span>
+							<span class="tm__name">{p.data.title}</span>
+							<span class="tm__role">{p.data.job_title}</span>
+						</a>
+					</li>
+				))
+			}
+		</ul>
+
+		{
+			value.join_headline && (
+				<div class="tm__join" data-reveal>
+					<h2 class="sc-h3">{value.join_headline}</h2>
+					<p class="sc-muted">
+						{value.join_text}{" "}
+						{value.join_email && (
+							<a href={`mailto:${value.join_email}`} class="tm__mail">
+								{value.join_email}
+							</a>
+						)}
+					</p>
+				</div>
+			)
+		}
+	</div>
+
+</section>
+
+
+<style>
+	.tm {
+		padding-block: clamp(72px, 9vw, 140px) clamp(96px, 12vw, 160px);
+	}
+
+	.tm--first {
+		padding-block-start: calc(var(--sc-header-h) + clamp(72px, 9vw, 140px));
+	}
+
+	.tm__intro {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+		gap: 40px;
+		margin-block-end: clamp(64px, 8vw, 120px);
+	}
+
+	.tm__eyebrow {
+		color: var(--sc-muted, var(--sc-grey));
+		padding-block-start: 0.8em;
+	}
+
+	.tm__text {
+		font-size: clamp(26px, 3.2vw, 48px);
+		font-weight: 300;
+		line-height: 1.18;
+		letter-spacing: -0.02em;
+	}
+
+	.tm__w {
+		display: inline-block;
+		margin-inline-end: 0.26em;
+	}
+
+	.tm__grid {
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: clamp(16px, 2vw, 28px);
+	}
+
+	.tm__card {
+		display: grid;
+		gap: 6px;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.tm__photo {
+		position: relative;
+		display: block;
+		aspect-ratio: 4 / 5;
+		overflow: hidden;
+		background: var(--sc-grey-25);
+		margin-block-end: 14px;
+	}
+
+	.tm__photo :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		/* Brand photography: muted until hovered */
+		filter: grayscale(1);
+		transition:
+			filter 0.6s var(--sc-ease),
+			transform 1s var(--sc-ease);
+	}
+
+	.tm__card:hover .tm__photo :global(img),
+	.tm__card:focus-visible .tm__photo :global(img) {
+		filter: none;
+		transform: scale(1.04);
+	}
+
+	.tm__name {
+		font-size: clamp(22px, 2vw, 30px);
+		font-weight: 300;
+		line-height: 1.1;
+		letter-spacing: -0.02em;
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.tm__card:hover .tm__name,
+	.tm__card:focus-visible .tm__name {
+		transform: translateX(6px);
+	}
+
+	.tm__role {
+		font-size: 14px;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	.tm__join {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 16px;
+		margin-block-start: clamp(64px, 8vw, 112px);
+		padding-block-start: 32px;
+		border-block-start: 1px solid var(--sc-line);
+	}
+
+	.tm__mail {
+		color: var(--sc-light-green);
+	}
+
+	@media (max-width: 900px) {
+		.tm__grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.tm__intro {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

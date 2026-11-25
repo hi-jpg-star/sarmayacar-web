@@ -1,0 +1,167 @@
+---
+import type { BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+
+type Block = Extract<PageContentBlock, { _type: "sc_approach" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const items = value.items ?? [];
+---
+
+<section class="ap tone-light" data-tone="light" id={value.anchor_id || undefined} data-approach>
+	<div class="sc-container ap__grid">
+		<header class="ap__head">
+			{value.label && <p class="sc-label sc-label--rule ap__label" data-reveal>{value.label}</p>}
+			<h2 class="sc-h2" data-reveal>{value.headline}</h2>
+			{value.intro && <p class="sc-lead ap__intro" data-reveal style="--reveal-i:1">{value.intro}</p>}
+			<ol class="ap__index" aria-hidden="true">
+				{items.map((item, i) => <li data-i={i}>{item.title}</li>)}
+			</ol>
+		</header>
+		<ol class="ap__list">
+			{
+				items.map((item, i) => (
+					<li class="ap__item" data-i={i}>
+						<h3 class="ap__title">{item.title}</h3>
+						{item.text && <p class="ap__text">{item.text}</p>}
+					</li>
+				))
+			}
+		</ol>
+	</div>
+</section>
+
+<script>
+	// The principle nearest the middle of the screen is "active"; others recede.
+	for (const root of document.querySelectorAll<HTMLElement>("[data-approach]")) {
+		const items = [...root.querySelectorAll<HTMLElement>(".ap__item")];
+		const index = [...root.querySelectorAll<HTMLElement>(".ap__index li")];
+		const tick = () => {
+			const mid = innerHeight * 0.5;
+			let best = 0, bestD = Infinity;
+			items.forEach((el, i) => {
+				const r = el.getBoundingClientRect();
+				const d = Math.abs(r.top + r.height / 2 - mid);
+				if (d < bestD) {
+					bestD = d;
+					best = i;
+				}
+			});
+			items.forEach((el, i) => el.classList.toggle("is-active", i === best));
+			index.forEach((el, i) => el.classList.toggle("is-active", i === best));
+		};
+		addEventListener("scroll", tick, { passive: true });
+		tick();
+	}
+</script>
+
+<style>
+	.ap {
+		padding-block: clamp(110px, 13vw, 200px);
+	}
+
+	.ap__grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+		gap: clamp(40px, 6vw, 120px);
+		align-items: start;
+	}
+
+	.ap__head {
+		position: sticky;
+		inset-block-start: calc(var(--sc-header-h) + 40px);
+		display: grid;
+		gap: 24px;
+	}
+
+	.ap__label {
+		color: var(--sc-light-green);
+	}
+
+	.ap__intro {
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	.ap__index {
+		list-style: none;
+		display: grid;
+		gap: 8px;
+		margin-block-start: 24px;
+		font-size: 13px;
+		letter-spacing: 0.06em;
+		color: var(--sc-mid-grey);
+	}
+
+	.ap__index li {
+		transition: color 0.4s var(--sc-ease), transform 0.5s var(--sc-ease);
+	}
+
+	.ap__index li.is-active {
+		color: var(--sc-black);
+		transform: translateX(8px);
+	}
+
+	.ap__list {
+		list-style: none;
+	}
+
+	.ap__item {
+		display: grid;
+		gap: 16px;
+		padding-block: clamp(48px, 6vw, 88px);
+		border-block-start: 1px solid var(--sc-line);
+		opacity: 0.28;
+		transition: opacity 0.6s var(--sc-ease);
+	}
+
+	.ap__item:last-child {
+		border-block-end: 1px solid var(--sc-line);
+	}
+
+	.ap__item.is-active {
+		opacity: 1;
+	}
+
+	.ap__title {
+		font-size: clamp(30px, 3.4vw, 54px);
+		font-weight: 300;
+		line-height: 1.05;
+		letter-spacing: -0.025em;
+	}
+
+	.ap__text {
+		font-size: clamp(16px, 1.25vw, 19px);
+		line-height: 1.6;
+		color: var(--sc-muted, var(--sc-grey));
+		max-width: 46ch;
+	}
+
+	.ap__item.is-active .ap__text {
+		color: var(--sc-black);
+	}
+
+	@media (max-width: 860px) {
+		.ap__grid {
+			grid-template-columns: 1fr;
+		}
+
+		.ap__head {
+			position: static;
+		}
+
+		.ap__index {
+			display: none;
+		}
+
+		.ap__item {
+			opacity: 1;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.ap__item {
+			opacity: 1;
+		}
+	}
+</style>

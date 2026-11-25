@@ -1,0 +1,285 @@
+---
+/**
+ * Portfolio: the companies in two groups (Ventures and Operator Angels) as an
+ * editorial list. Each row links to the company's own page at
+ * /portfolio/<slug>, which src/pages/portfolio/[slug].astro renders.
+ */
+import { getEmDashCollection } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { byOrder } from "../../utils/sc";
+import { toParagraphs } from "../../utils/text";
+
+type Block = Extract<PageContentBlock, { _type: "sc_portfolio" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const { entries, cacheHint } = await getEmDashCollection("companies", { limit: 200 });
+if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
+
+const groups = [
+	{ key: "ventures", program: "Ventures", label: value.ventures_label || "Portfolio", intro: value.ventures_intro },
+	{ key: "angels", program: "Angel Operators", label: value.angels_label || "Operators", intro: value.angels_intro },
+]
+	.map((g) => ({ ...g, companies: entries.filter((c) => c.data.program === g.program).sort(byOrder) }))
+	.filter((g) => g.companies.length > 0);
+const uid = `pf-${value._key}`;
+const year = (s?: string | null) => (s ? (s.match(/\d{4}/)?.[0] ?? s) : "");
+---
+
+<section class="pf tone-light" data-tone="light" id={value.anchor_id || undefined} data-portfolio>
+	<div class="sc-container">
+		{
+			groups.length > 1 && (
+				<div class="pf__tabs" role="tablist" aria-label={value.headline}>
+					{groups.map((g, i) => (
+						<button
+							type="button"
+							role="tab"
+							class="pf__tab"
+							id={`${uid}-tab-${g.key}`}
+							aria-controls={`${uid}-panel-${g.key}`}
+							aria-selected={i === 0 ? "true" : "false"}
+						>
+							{g.label}
+						</button>
+					))}
+				</div>
+			)
+		}
+
+		{
+			groups.map((g, i) => (
+				<div
+					class="pf__panel"
+					role={groups.length > 1 ? "tabpanel" : undefined}
+					id={`${uid}-panel-${g.key}`}
+					aria-labelledby={groups.length > 1 ? `${uid}-tab-${g.key}` : undefined}
+					hidden={i !== 0}
+				>
+					{g.intro && (
+						<div class="pf__intro">
+							{toParagraphs(g.intro).map((p) => (
+								<p class="sc-lead">{p}</p>
+							))}
+						</div>
+					)}
+					<ul class="pf__list">
+						{g.companies.map((c, j) => (
+							<li style={`--j:${j}`}>
+								<a href={`/portfolio/${c.id}`} class="pf__row">
+									<span class="pf__logo" aria-hidden="true">
+										{(c.data.logo || c.data.grid_logo) && (
+											<Image image={(c.data.logo || c.data.grid_logo)!} sizes="120px" alt="" />
+										)}
+									</span>
+									<span class="pf__name">{c.data.title}</span>
+									<span class="pf__sector">{c.data.sector_label}</span>
+									<span class="pf__year">{year(c.data.partnered)}</span>
+									<span class="pf__arrow" aria-hidden="true">→</span>
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
+			))
+		}
+	</div>
+</section>
+
+<script>
+	for (const root of document.querySelectorAll<HTMLElement>("[data-portfolio]")) {
+		const tabs = [...root.querySelectorAll<HTMLButtonElement>(".pf__tab")];
+		const select = (tab: HTMLButtonElement) => {
+			for (const t of tabs) {
+				const on = t === tab;
+				t.setAttribute("aria-selected", String(on));
+				const panel = document.getElementById(t.getAttribute("aria-controls")!);
+				if (panel) panel.hidden = !on;
+			}
+		};
+		tabs.forEach((t) => t.addEventListener("click", () => select(t)));
+		// /portfolio#operators opens the second list
+		if (location.hash === "#operators" && tabs[1]) select(tabs[1]);
+	}
+</script>
+
+<style>
+	.pf {
+		padding-block: clamp(56px, 7vw, 96px) clamp(96px, 12vw, 160px);
+	}
+
+	.pf__tabs {
+		display: flex;
+		gap: clamp(24px, 4vw, 56px);
+		margin-block-end: clamp(32px, 4vw, 56px);
+	}
+
+	.pf__tab {
+		position: relative;
+		padding-block: 0 14px;
+		border: 0;
+		background: none;
+		cursor: pointer;
+		font: inherit;
+		font-size: clamp(28px, 3.4vw, 48px);
+		font-weight: 300;
+		letter-spacing: -0.03em;
+		color: var(--sc-mid-grey);
+		transition: color 0.4s;
+	}
+
+	.pf__tab::after {
+		content: "";
+		position: absolute;
+		inset-inline: 0;
+		inset-block-end: 0;
+		height: 2px;
+		background: var(--sc-light-green);
+		transform: scaleX(0);
+		transform-origin: left;
+		transition: transform 0.6s var(--sc-ease);
+	}
+
+	.pf__tab:hover {
+		color: var(--sc-dark-green-75);
+	}
+
+	.pf__tab[aria-selected="true"] {
+		color: var(--sc-black);
+	}
+
+	.pf__tab[aria-selected="true"]::after {
+		transform: none;
+	}
+
+	.pf__intro {
+		max-width: 62ch;
+		margin-block-end: clamp(40px, 5vw, 72px);
+	}
+
+	.pf__list {
+		list-style: none;
+		border-block-end: 1px solid var(--sc-line);
+	}
+
+	.pf__list li {
+		border-block-start: 1px solid var(--sc-line);
+		animation: pf-in 0.8s var(--sc-ease) both;
+		animation-delay: calc(min(var(--j), 12) * 40ms);
+	}
+
+	.pf__row {
+		display: grid;
+		grid-template-columns: 120px minmax(0, 1fr) minmax(0, 0.6fr) 64px 32px;
+		align-items: center;
+		gap: 24px;
+		padding: clamp(18px, 2vw, 26px) 2vw;
+		margin-inline: -2vw;
+		color: inherit;
+		text-decoration: none;
+		transition: background-color 0.4s var(--sc-ease);
+	}
+
+	.pf__logo {
+		display: grid;
+		place-items: center start;
+		height: 56px;
+	}
+
+	.pf__logo :global(img) {
+		max-width: 100%;
+		max-height: 56px;
+		width: auto;
+		object-fit: contain;
+		filter: grayscale(1);
+		opacity: 0.85;
+		transition:
+			filter 0.5s var(--sc-ease),
+			opacity 0.5s;
+	}
+
+	.pf__name {
+		font-size: clamp(24px, 2.6vw, 40px);
+		font-weight: 300;
+		line-height: 1.1;
+		letter-spacing: -0.025em;
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.pf__sector,
+	.pf__year {
+		font-size: 14px;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	.pf__year {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.pf__arrow {
+		justify-self: end;
+		font-size: 20px;
+		color: var(--sc-light-green);
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.pf__row:hover,
+	.pf__row:focus-visible {
+		background-color: var(--sc-grey-25);
+	}
+
+	.pf__row:hover .pf__name,
+	.pf__row:focus-visible .pf__name {
+		transform: translateX(10px);
+	}
+
+	.pf__row:hover .pf__arrow,
+	.pf__row:focus-visible .pf__arrow {
+		transform: translateX(6px);
+	}
+
+	.pf__row:hover .pf__logo :global(img),
+	.pf__row:focus-visible .pf__logo :global(img) {
+		filter: none;
+		opacity: 1;
+	}
+
+	@keyframes pf-in {
+		from {
+			opacity: 0;
+			transform: translateY(12px);
+		}
+	}
+
+	@media (max-width: 860px) {
+		.pf__row {
+			grid-template-columns: 72px minmax(0, 1fr) 24px;
+			gap: 6px 16px;
+		}
+
+		.pf__logo {
+			grid-row: span 2;
+		}
+
+		.pf__sector {
+			grid-column: 2;
+			grid-row: 2;
+		}
+
+		.pf__year {
+			display: none;
+		}
+
+		.pf__arrow {
+			grid-column: 3;
+			grid-row: 1 / span 2;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.pf__list li {
+			animation: none;
+		}
+	}
+</style>

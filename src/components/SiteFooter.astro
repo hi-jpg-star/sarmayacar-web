@@ -1,0 +1,392 @@
+---
+/**
+ * Sarmayacar footer: a full-screen black panel that sits underneath the page
+ * and is uncovered as the visitor scrolls to the end (the page slides up off
+ * it). Closing line and funding button, navigation, contact details (from the
+ * "footer_contact" menu) and the full logo set large across the bottom.
+ */
+import logoLight from "../assets/brand/logo-light.svg?url";
+
+interface MenuItem {
+	label: string;
+	url: string;
+	target?: string | null;
+	cssClasses?: string | null;
+}
+
+interface Props {
+	items: MenuItem[];
+	contact: MenuItem[];
+	siteTitle: string;
+	tagline?: string | null;
+	linkedin?: string | null;
+}
+
+const { items, contact, siteTitle, linkedin } = Astro.props;
+const year = new Date().getFullYear();
+const isButton = (item: MenuItem) => item.cssClasses?.split(/\s+/).includes("button") ?? false;
+const links = items.filter((i) => !isButton(i));
+const cta = items.find(isButton);
+---
+
+<footer class="sf tone-dark" data-tone="dark">
+	<div class="sf__inner sc-container">
+		<div class="sf__lead">
+			<p class="sf__line">Build with us.</p>
+			{
+				cta && (
+					<a href={cta.url} class="sc-btn sf__cta">
+						{cta.label}
+						<span class="sc-btn__arrow" />
+					</a>
+				)
+			}
+		</div>
+
+		<div class="sf__bottom">
+			<div class="sf__cols">
+				<a href="/" class="sf__logo" aria-label={`${siteTitle} home`}>
+					<img src={logoLight} alt="" width="1392" height="283" />
+				</a>
+				<nav aria-label="Footer">
+					<p class="sc-label">Explore</p>
+					<ul>
+						{
+							links.map((item) => (
+								<li>
+									<a href={item.url}>{item.label}</a>
+								</li>
+							))
+						}
+					</ul>
+				</nav>
+				{
+					contact.length > 0 && (
+						<div>
+							<p class="sc-label">Contact</p>
+							<ul>
+								{contact.map((item) => (
+									<li>
+										<a href={item.url} target={item.url.startsWith("http") ? "_blank" : undefined} rel="noopener">
+											{item.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</div>
+					)
+				}
+				{
+					linkedin && (
+						<div>
+							<p class="sc-label">Follow</p>
+							<ul>
+								<li>
+									<a href={linkedin} target="_blank" rel="noopener">
+										LinkedIn
+									</a>
+								</li>
+							</ul>
+						</div>
+					)
+				}
+			</div>
+			<div class="sf__legal">
+				<p>&copy; {year} {siteTitle}</p>
+				<a href="#main" class="sf__top-link">Back to top ↑</a>
+			</div>
+		</div>
+	</div>
+</footer>
+
+<style>
+	/* The page (main) slides up off the footer: the footer sticks to the bottom
+	   of the screen underneath it, and main has a solid background on top. */
+	.sf {
+		position: sticky;
+		bottom: 0;
+		z-index: 0;
+		min-height: 100svh;
+		display: flex;
+		overflow: hidden;
+		--sf-p: 1;
+		--sf-bottom: 1;
+		--sf-cta: 1;
+		--sf-line: 1;
+	}
+
+	/* Darkness veil that lifts off as the page scrolls up to uncover the footer */
+	.sf::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: var(--sc-black);
+		opacity: calc(clamp(0, (1 - var(--sf-p, 1)) * 1.15, 1));
+		pointer-events: none;
+		z-index: 2;
+		will-change: opacity;
+	}
+
+	.sf__inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		gap: clamp(32px, 6vh, 80px);
+		padding-block: calc(var(--sc-header-h) + clamp(64px, 11vh, 130px)) clamp(20px, 3vh, 32px);
+	}
+
+	.sf__lead {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.sf__line {
+		display: inline-block;
+		max-width: none;
+		white-space: nowrap;
+		/* Optical left alignment so the vertical stem of "B" sits flush with the button */
+		margin-inline-start: -0.065em;
+		font-size: clamp(56px, min(11vw, 17vh), 160px);
+		font-weight: 300;
+		line-height: 0.96;
+		letter-spacing: -0.04em;
+		opacity: var(--sf-line, 1);
+		filter: blur(calc((1 - var(--sf-line, 1)) * 10px));
+		transform: translateY(calc((1 - var(--sf-line, 1)) * 18px));
+		will-change: opacity, filter, transform;
+	}
+
+	.sf__cta {
+		position: relative;
+		overflow: hidden;
+		isolation: isolate;
+		display: inline-flex;
+		align-items: center;
+		gap: clamp(18px, 2vw, 28px);
+		margin-block-start: clamp(32px, 5vh, 56px);
+		padding: clamp(22px, 2.2vw, 32px) clamp(36px, 4vw, 60px);
+		background: var(--sc-light-green);
+		color: var(--sc-white);
+		font-size: clamp(15px, 1.35vw, 20px);
+		font-weight: 500;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		opacity: var(--sf-cta, 1);
+		filter: blur(calc((1 - var(--sf-cta, 1)) * 8px));
+		transform: translateY(calc((1 - var(--sf-cta, 1)) * 16px));
+		transition:
+			color 0.45s var(--sc-ease);
+		will-change: opacity, filter, transform;
+	}
+
+	.sf__cta::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background: var(--sc-white);
+		transform: translateY(102%);
+		transition: transform 0.5s var(--sc-ease);
+	}
+
+	.sf__cta:hover,
+	.sf__cta:focus-visible {
+		background: var(--sc-light-green);
+		color: var(--sc-dark-green);
+		transform: translateY(-2px);
+	}
+
+	.sf__cta:hover::before,
+	.sf__cta:focus-visible::before {
+		transform: translateY(0);
+	}
+
+	.sf__cta :global(.sc-btn__arrow) {
+		width: 32px;
+		transition: width 0.45s var(--sc-ease);
+	}
+
+	.sf__cta:hover :global(.sc-btn__arrow),
+	.sf__cta:focus-visible :global(.sc-btn__arrow) {
+		width: 48px;
+	}
+
+	.sf__cols {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 40px 24px;
+	}
+
+	.sf__cols .sc-label {
+		color: var(--sc-grey);
+	}
+
+	.sf__cols ul {
+		list-style: none;
+		display: grid;
+		gap: 10px;
+		margin-block-start: 20px;
+		font-size: 16px;
+		color: var(--sc-mid-grey);
+	}
+
+	.sf__cols a,
+	.sf__legal a {
+		color: inherit;
+		text-decoration: none;
+		transition: color 0.3s;
+	}
+
+	.sf__cols a:hover,
+	.sf__top-link:hover {
+		color: var(--sc-white);
+	}
+
+	/* The supplied logo file, small and scaled evenly (manual 1.2: at least
+	   150px wide on desktop), with clear space around it */
+	.sf__logo {
+		display: block;
+		align-self: start;
+		width: 180px;
+	}
+
+	.sf__logo img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	.sf__legal {
+		display: flex;
+		justify-content: space-between;
+		gap: 16px;
+		margin-block-start: clamp(20px, 3vh, 32px);
+		padding-block-start: 20px;
+		border-block-start: 1px solid var(--sc-line-on-dark);
+		font-size: 13px;
+		color: var(--sc-grey);
+	}
+
+	.sf__bottom {
+		display: grid;
+		gap: clamp(40px, 6vh, 72px);
+		opacity: var(--sf-bottom, 1);
+		filter: blur(calc((1 - var(--sf-bottom, 1)) * 8px));
+		transform: translateY(calc((1 - var(--sf-bottom, 1)) * 16px));
+		will-change: opacity, filter, transform;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.sf::after {
+			opacity: 0;
+		}
+		.sf__line,
+		.sf__cta,
+		.sf__bottom {
+			opacity: 1;
+			filter: none;
+			transform: none;
+		}
+	}
+
+	@media (max-width: 800px) {
+		.sf__cols {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		/* manual 1.2: at least 200px wide on mobile */
+		.sf__logo {
+			grid-column: 1 / -1;
+			width: 200px;
+		}
+	}
+
+	/* When the footer is taller than the window (phones, short screens), its
+	   top could never be uncovered, so it scrolls in normally instead. */
+	.sf.is-tall {
+		position: relative;
+		z-index: auto;
+	}
+</style>
+
+<script>
+	const footer = document.querySelector<HTMLElement>(".sf");
+	if (footer) {
+		const lead = footer.querySelector<HTMLElement>(".sf__lead");
+		const line = footer.querySelector<HTMLElement>(".sf__line");
+		const main = document.getElementById("main");
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+		const fitLine = () => {
+			if (!lead || !line) return;
+			const targetW = lead.clientWidth;
+			if (!targetW) return;
+			line.style.fontSize = "100px";
+			const w = line.getBoundingClientRect().width;
+			if (w > 0) {
+				// Scale to full container width, capped gently on very short viewports
+				const fitted = (100 * targetW) / w;
+				const maxByHeight = Math.max(48, innerHeight * 0.24);
+				line.style.fontSize = `${Math.min(fitted, maxByHeight)}px`;
+			}
+		};
+
+		const fit = () => {
+			fitLine();
+			footer.classList.remove("is-tall");
+			footer.classList.toggle("is-tall", footer.offsetHeight > innerHeight + 1);
+			updateReveal();
+		};
+
+		const smoothstep = (edge0: number, edge1: number, x: number) => {
+			const t = Math.min(1, Math.max(0, (x - edge0) / Math.max(0.001, edge1 - edge0)));
+			return t * t * (3 - 2 * t);
+		};
+
+		let raf = 0;
+		const updateReveal = () => {
+			raf = 0;
+			if (reduce) {
+				footer.style.setProperty("--sf-p", "1");
+				footer.style.setProperty("--sf-bottom", "1");
+				footer.style.setProperty("--sf-cta", "1");
+				footer.style.setProperty("--sf-line", "1");
+				return;
+			}
+			const vh = innerHeight;
+			const fh = Math.max(1, footer.offsetHeight);
+			let p = 1;
+			if (footer.classList.contains("is-tall")) {
+				const top = footer.getBoundingClientRect().top;
+				p = Math.min(1, Math.max(0, (vh - top) / Math.min(vh * 0.85, fh)));
+			} else if (main) {
+				const uncovered = Math.max(0, vh - main.getBoundingClientRect().bottom);
+				p = Math.min(1, uncovered / Math.min(vh, fh));
+			}
+			// Delayed, gentle emergence out of black with staggered bottom-to-top reveals
+			footer.style.setProperty("--sf-p", smoothstep(0.15, 0.96, p).toFixed(4));
+			footer.style.setProperty("--sf-bottom", smoothstep(0.28, 0.68, p).toFixed(4));
+			footer.style.setProperty("--sf-cta", smoothstep(0.52, 0.86, p).toFixed(4));
+			footer.style.setProperty("--sf-line", smoothstep(0.68, 0.99, p).toFixed(4));
+		};
+
+		const onScroll = () => {
+			if (!raf) raf = requestAnimationFrame(updateReveal);
+		};
+
+		footer.querySelector<HTMLAnchorElement>(".sf__top-link")?.addEventListener("click", (e) => {
+			e.preventDefault();
+			window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+		});
+
+		fit();
+		document.fonts?.ready.then(fit);
+		addEventListener("resize", fit);
+		addEventListener("load", fit);
+		addEventListener("scroll", onScroll, { passive: true });
+	}
+</script>

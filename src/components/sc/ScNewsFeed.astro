@@ -1,0 +1,262 @@
+---
+import { getEmDashCollection } from "emdash";
+import { Image, type BlockComponentProps } from "emdash/ui";
+import type { PageContentBlock } from "../../../emdash-env";
+import { fileUrl, formatDate, href } from "../../utils/sc";
+
+type Block = Extract<PageContentBlock, { _type: "sc_news_feed" }>;
+type Props = BlockComponentProps<Block>;
+
+const { value } = Astro.props;
+const [news, events] = await Promise.all([
+	getEmDashCollection("news", { orderBy: { published_on: "desc" }, limit: 300 }),
+	getEmDashCollection("events", { orderBy: { event_date: "desc" }, limit: 100 }),
+]);
+if (Astro.cache?.enabled) {
+	Astro.cache.set(news.cacheHint);
+	Astro.cache.set(events.cacheHint);
+}
+
+type Card = { key: string; title: string; label: string; meta: string; date: string; url?: string; image?: unknown };
+const press: Card[] = news.entries
+	.filter((n) => n.data.category !== "Newsletter")
+	.map((n) => ({
+		key: n.id,
+		title: n.data.title,
+		label: n.data.category,
+		meta: n.data.outlet ?? "",
+		date: formatDate(n.data.published_on),
+		url: href(n.data.url),
+		image: n.data.thumbnail,
+	}));
+const newsletters: Card[] = news.entries
+	.filter((n) => n.data.category === "Newsletter")
+	.map((n) => ({
+		key: n.id,
+		title: n.data.title,
+		label: "Newsletter",
+		meta: "PDF",
+		date: formatDate(n.data.published_on),
+		url: fileUrl(n.data.newsletter_file as never, Astro.locals as never) ?? href(n.data.url),
+		image: n.data.thumbnail,
+	}));
+const eventCards: Card[] = events.entries.map((e) => ({
+	key: e.id,
+	title: e.data.title,
+	label: "Event",
+	meta: "",
+	date: formatDate(e.data.event_date),
+	image: e.data.cover,
+}));
+const tabs = [
+	{ key: "press", label: "Press", cards: press },
+	{ key: "newsletter", label: "Newsletter", cards: newsletters },
+	{ key: "events", label: "Events", cards: eventCards },
+].filter((t) => t.cards.length > 0);
+const uid = `nf-${value._key}`;
+---
+
+<section class="nf tone-light" data-tone="light" id={value.anchor_id || undefined} data-newsfeed>
+	<div class="sc-container">
+		<div class="nf__tabs" role="tablist" aria-label={value.headline}>
+			{
+				tabs.map((t, i) => (
+					<button
+						type="button"
+						role="tab"
+						class="nf__tab"
+						data-key={t.key}
+						id={`${uid}-tab-${t.key}`}
+						aria-controls={`${uid}-panel-${t.key}`}
+						aria-selected={i === 0 ? "true" : "false"}
+					>
+						{t.label}
+					</button>
+				))
+			}
+		</div>
+		{
+			tabs.map((t, i) => (
+				<div class="nf__panel" role="tabpanel" id={`${uid}-panel-${t.key}`} aria-labelledby={`${uid}-tab-${t.key}`} hidden={i !== 0}>
+					<ul class="nf__grid">
+						{t.cards.map((c, j) => {
+							const Tag = c.url ? "a" : "div";
+							return (
+								<li style={`--j:${Math.min(j, 12)}`}>
+									<Tag class="nf__card" href={c.url} target={c.url ? "_blank" : undefined} rel={c.url ? "noopener" : undefined}>
+										<span class="nf__img">{c.image ? <Image image={c.image as never} sizes="(max-width: 700px) 100vw, 33vw" alt="" /> : null}</span>
+										<span class="nf__meta">
+											<span class="sc-label nf__label">{c.label}</span>
+											<span>{c.date}</span>
+										</span>
+										<span class="nf__title">{c.title}</span>
+										{c.meta && <span class="nf__outlet">{c.meta}</span>}
+									</Tag>
+								</li>
+							);
+						})}
+					</ul>
+				</div>
+			))
+		}
+	</div>
+</section>
+
+<script>
+	for (const root of document.querySelectorAll<HTMLElement>("[data-newsfeed]")) {
+		const tabs = [...root.querySelectorAll<HTMLButtonElement>(".nf__tab")];
+		const select = (tab: HTMLButtonElement) => {
+			for (const t of tabs) {
+				const on = t === tab;
+				t.setAttribute("aria-selected", String(on));
+				const panel = document.getElementById(t.getAttribute("aria-controls")!);
+				if (panel) panel.hidden = !on;
+			}
+		};
+		tabs.forEach((t) => t.addEventListener("click", () => select(t)));
+		// /news#events or #newsletter opens that tab
+		const want = location.hash.slice(1).toLowerCase();
+		const match = tabs.find((t) => t.dataset.key === want);
+		if (match) {
+			select(match);
+			root.scrollIntoView();
+		}
+	}
+</script>
+
+<style>
+	.nf {
+		padding-block: clamp(56px, 7vw, 96px) clamp(96px, 12vw, 160px);
+		scroll-margin-top: var(--sc-header-h);
+	}
+
+	.nf__tabs {
+		display: flex;
+		gap: clamp(24px, 4vw, 56px);
+		border-block-end: 1px solid var(--sc-line);
+		margin-block-end: clamp(32px, 4vw, 56px);
+	}
+
+	.nf__tab {
+		position: relative;
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+		padding-block: 0 18px;
+		border: 0;
+		background: none;
+		cursor: pointer;
+		font: inherit;
+		font-size: clamp(24px, 3vw, 40px);
+		font-weight: 300;
+		letter-spacing: -0.03em;
+		color: var(--sc-mid-grey);
+	}
+
+	.nf__tab::after {
+		content: "";
+		position: absolute;
+		inset-inline: 0;
+		inset-block-end: -1px;
+		height: 2px;
+		background: var(--sc-light-green);
+		transform: scaleX(0);
+		transform-origin: left;
+		transition: transform 0.6s var(--sc-ease);
+	}
+
+	.nf__tab[aria-selected="true"] {
+		color: var(--sc-black);
+	}
+
+	.nf__tab[aria-selected="true"]::after {
+		transform: none;
+	}
+
+	.nf__grid {
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: clamp(32px, 4vw, 56px) clamp(16px, 2vw, 28px);
+	}
+
+	.nf__grid li {
+		animation: nf-in 0.8s var(--sc-ease) both;
+		animation-delay: calc(var(--j) * 50ms);
+	}
+
+	.nf__card {
+		display: grid;
+		gap: 10px;
+	}
+
+	.nf__img {
+		position: relative;
+		display: block;
+		aspect-ratio: 3 / 2;
+		overflow: hidden;
+		background: var(--sc-grey-25);
+		margin-block-end: 8px;
+	}
+
+	.nf__img :global(img) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transition: transform 1s var(--sc-ease);
+	}
+
+	a.nf__card:hover .nf__img :global(img) {
+		transform: scale(1.05);
+	}
+
+	.nf__meta {
+		display: flex;
+		justify-content: space-between;
+		font-size: 13px;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	.nf__label {
+		color: var(--sc-light-green);
+	}
+
+	.nf__title {
+		font-size: clamp(19px, 1.5vw, 22px);
+		line-height: 1.35;
+		letter-spacing: -0.01em;
+		text-wrap: pretty;
+	}
+
+	a.nf__card:hover .nf__title {
+		text-decoration: underline;
+		text-underline-offset: 4px;
+		text-decoration-thickness: 1px;
+	}
+
+	.nf__outlet {
+		font-size: 14px;
+		color: var(--sc-muted, var(--sc-grey));
+	}
+
+	@keyframes nf-in {
+		from {
+			opacity: 0;
+			transform: translateY(16px);
+		}
+	}
+
+	@media (max-width: 900px) {
+		.nf__grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 560px) {
+		.nf__grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
